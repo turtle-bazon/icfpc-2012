@@ -11,8 +11,10 @@
 			    (> y y-size))
 		    (adjust-array initial-world (list (max x x-size) (max y y-size))))
 		  (setf (aref initial-world (- x 1) (- y 1)) type)))
-	(:receive (lambda (x y)
-		    (aref initial-world (- x 1) (- y 1))))))))
+	(:receive (lambda (command x y)
+		    (ecase command
+		      (:get (aref initial-world (- x 1) (- y 1)))
+		      (:fallback (error "No more fallbacks")))))))))
 
 (defun apply-map-parser (stream cell-receiver)
   (iter (for line in-stream stream using #'read-line)
