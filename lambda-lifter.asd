@@ -13,7 +13,10 @@
   :description "ICFPC 2012: the lambda lifter"
   :depends-on (:iterate :metatilities :split-sequence)
   :components ((:file "package")
-               (:file "robot" :depends-on ("package"))
                (:file "map-builder" :depends-on ("package"))
-               (:file "main" :depends-on ("map-builder"))))
+               (:file "robot" :depends-on ("map-builder"))
+               (:file "rock" :depends-on ("map-builder"))
+               (:file "score" :depends-on ("map-builder"))
+               (:file "game" :depends-on ("robot" "rock" "score"))
+               (:file "main" :depends-on ("game"))))
 
