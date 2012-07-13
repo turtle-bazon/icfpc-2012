@@ -11,7 +11,7 @@
   :author "swizard"
   :licence "icfpc"
   :description "ICFPC 2012: the lambda lifter"
-  :depends-on (:iterate :metatilities)
+  :depends-on (:iterate :metatilities :split-sequence)
   :components ((:file "package")
                (:file "robot" :depends-on ("package"))
                (:file "map-builder" :depends-on ("package"))
