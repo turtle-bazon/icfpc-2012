@@ -2,7 +2,8 @@
 (in-package :lambda-lifter)
 
 (defun array-map-builder ()
-  (let ((initial-world (make-array '(0 0) :adjustable t)))
+  (let ((initial-world (make-array '(0 0) :adjustable t))
+	(robot-coords '(nil nil)))
     (lambda (command &optional type x y)
       (ecase command
 	(:build (destructuring-bind (x-size y-size)
@@ -10,10 +11,13 @@
 		  (when (or (> x x-size )
 			    (> y y-size))
 		    (adjust-array initial-world (list (max x x-size) (max y y-size))))
-		  (setf (aref initial-world (- x 1) (- y 1)) type)))
+		  (setf (aref initial-world (- x 1) (- y 1)) type)
+		  (when (eq type :robot)
+		    (setf robot-coords (list x y)))))
 	(:receive (lambda (command x y)
 		    (ecase command
 		      (:get (aref initial-world (- x 1) (- y 1)))
+		      (:dimensions (array-dimensions initial-world))
 		      (:fallback (error "No more fallbacks")))))))))
 
 (defun apply-map-parser (stream cell-receiver)
