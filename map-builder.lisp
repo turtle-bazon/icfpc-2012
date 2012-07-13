@@ -9,9 +9,10 @@
 		    (array-dimensions initial-world)
 		  (when (or (> x x-size )
 			    (> y y-size))
-		    (adjust-array initial-world (list (max y y-size) (max x x-size))))
-		  (setf (aref initial-world (- y 1) (- x 1)) type)))
-	(:receive initial-world)))))
+		    (adjust-array initial-world (list (max x x-size) (max y y-size))))
+		  (setf (aref initial-world (- x 1) (- y 1)) type)))
+	(:receive (lambda (x y)
+		    (aref initial-world (- x 1) (- y 1))))))))
 
 (defun apply-map-parser (stream cell-receiver)
   (iter (for line in-stream stream using #'read-line)
