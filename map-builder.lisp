@@ -28,6 +28,7 @@
              (elt world (+ (* (- height y) width) (1- x))))
            (lambda (type)
              (gethash type objects))
+           (lambda () nil)
            metadata))))))
 
 (defun apply-map-parser (stream cell-receiver)
