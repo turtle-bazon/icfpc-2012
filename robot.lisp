@@ -2,7 +2,7 @@
 (in-package :lambda-lifter)
 
 (defmacro defrobot-move (name delta-x delta-y path-symbol)
-  `(defun ,name (world objects path)
+  `(defun ,name (world objects path metadata)
      (let* ((robot-coords (first (funcall objects :robot)))
             (rx (realpart robot-coords))
             (ry (imagpart robot-coords)))
@@ -16,7 +16,8 @@
                  (case type
                    (:robot (list (complex (+ rx ,delta-x) (+ ry ,delta-y))))
                    (t (funcall objects type))))
-               (lambda () (cons ,path-symbol (funcall path)))))))
+               (lambda () (cons ,path-symbol (funcall path)))
+               metadata))))
 
 (defrobot-move robot-move-left -1 0 :L)
 (defrobot-move robot-move-right 1 0 :R)
