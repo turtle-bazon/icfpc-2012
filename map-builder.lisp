@@ -55,7 +55,7 @@
                               (#\# :wall)
                               (#\* :rock)
                               (#\\ :lambda)
-                              (#\L :closed-lambda-lift)
+                              (#\L :lambda-lift)
                               (#\. :earth))
                             max-cell-index
                             cell-index
