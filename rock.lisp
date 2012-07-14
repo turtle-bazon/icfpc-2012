@@ -21,11 +21,11 @@
 	     (case type
 	       (:rock (cons (complex ,rx-new ,ry-new)
 			    (remove (complex ,rx ,ry) (funcall ,objects :rock))))
-	       (:injury ,(if non-map-update
+	       (:injury (if ,non-map-update
 			    nil
-                            (with-robot-coords (rbx rby) objects
-			      (when (and (= rx-new rbx)
-					 (= (- ry-new 1) rby))
+                            (with-robot-coords (rbx rby) ,objects
+			      (when (and (= ,rx-new rbx)
+					 (= (- ,ry-new 1) rby))
 				t))))
 	       (t (funcall ,objects type))))
 	   ,path

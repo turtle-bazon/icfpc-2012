@@ -5,7 +5,7 @@
   (lambda (world objects path metadata)
     (values (lambda (x y)
               (if (and (= x lx) (= y ly))
-                  nil
+                  :robot
                   (funcall world x y)))
             (lambda (type)
               (case type
