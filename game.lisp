@@ -86,9 +86,13 @@
 
   ;; (declare (optimize (debug 3)))
   ;; (dump-world world objects path metadata)
-  ;; (format t "Target: ~a; score: ~a; path: ~a~%" (choose-target world objects path metadata) (score world objects path metadata) (dump-path nil path))
-  ;; ;;(sleep 0.2)
-  ;; (break)
+  ;; (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a~%"
+  ;;         (choose-target world objects path metadata)
+  ;;         (score world objects path metadata)
+  ;;         (funcall objects :underwater)
+  ;;         (dump-path nil path))
+  ;; (sleep 0.2)
+  ;; ;;(break)
   
   (let ((current-score (update-hiscore world objects path metadata)))    
     ;; check for extremal condition
