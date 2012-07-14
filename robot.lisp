@@ -23,7 +23,7 @@
 (defrobot-move robot-move-up 0 1 :U)
 (defrobot-move robot-move-down 0 -1 :D)
 
-(defmacro defrobot-go-script (name delta-x delta-y mover &key push-check push-script)
+(defmacro defrobot-go-script (name delta-x delta-y mover &key push-check push-script step-portal-script)
   `(defun ,(form-symbol 'robot-go- name '-script) (world objects metadata)
      (with-robot-coords (rx ry) objects
        (let ((rx~ (+ rx ,delta-x)) (ry~ (+ ry ,delta-y)))
@@ -31,7 +31,8 @@
            (ecase (funcall world rx~ ry~)
              (:robot (error "Something wrong: more than one robot encountered"))
              ((:wall :closed-lambda-lift :target-1 :target-2 :target-3 :target-4 :target-5 :target-6 :target-7 :target-8 :target-9) nil)
-	     ((:portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i) )
+	     ((:portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i)
+	      (list (function ,mover) (,step-portal-script rx~ ry~)))
              (:rock ,(when (and push-check push-script)
                            `(when (,push-check world metadata rx~ ry~)
                               (list (function ,mover) (,push-script rx~ ry~)))))
@@ -39,8 +40,8 @@
              (:open-lambda-lift (list (function ,mover) (collect-lift rx~ ry~) (function path-set-cleared)))
              ((:earth nil) (list (function ,mover)))))))))
 
-(defrobot-go-script left -1 0 robot-move-left :push-check rock-can-be-pushed-left :push-script rock-push-left)
-(defrobot-go-script right 1 0 robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right)
-(defrobot-go-script up 0 1 robot-move-up)
-(defrobot-go-script down 0 -1 robot-move-down)
+(defrobot-go-script left -1 0 robot-move-left :push-check rock-can-be-pushed-left :push-script rock-push-left :step-portal-script step-into-portal)
+(defrobot-go-script right 1 0 robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right :step-portal-script step-into-portal)
+(defrobot-go-script up 0 1 robot-move-up :step-portal-script step-into-portal)
+(defrobot-go-script down 0 -1 robot-move-down :step-portal-script step-into-portal)
 
