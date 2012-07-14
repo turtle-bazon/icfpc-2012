@@ -14,9 +14,10 @@
   :depends-on (:iterate :metatilities :split-sequence)
   :components ((:file "package")
                (:file "map-builder" :depends-on ("package"))
-               (:file "robot" :depends-on ("map-builder"))
+               (:file "lambda" :depends-on ("map-builder"))
                (:file "rock" :depends-on ("map-builder"))
                (:file "score" :depends-on ("map-builder"))
-               (:file "game" :depends-on ("robot" "rock" "score"))
+               (:file "robot" :depends-on ("lambda" "rock"))
+               (:file "game" :depends-on ("robot" "score"))
                (:file "main" :depends-on ("game"))))
 
