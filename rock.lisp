@@ -122,3 +122,6 @@
 	(funcall (rock-slide-right rx ry) world objects path metadata)
 	(funcall (rock-slide-left rx ry) world objects path metadata)
 	(funcall (rock-slide-right-over-lambda rx ry) world objects path metadata))))
+
+(defun rocks-move (world objects path metadata)
+  (values world objects path metadata))
