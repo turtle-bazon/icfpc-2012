@@ -3,13 +3,6 @@
 
 (defun robot-coords (objects) (first (funcall objects :robot)))
 
-(defmacro with-coords ((x y) coords &body body)
-  (with-gensyms (my-coords)
-    `(let* ((,my-coords ,coords)
-            (,x (realpart ,my-coords))
-            (,y (imagpart ,my-coords)))
-       ,@body)))
-
 (defmacro with-robot-coords ((x y) objects &body body)
   `(with-coords (,x ,y) (robot-coords ,objects)
      ,@body))
@@ -52,5 +45,5 @@
 (defrobot-go-script left -1 0 robot-move-left :push-check rock-can-be-pushed-left :push-script rock-push-left)
 (defrobot-go-script right 1 0 robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right)
 (defrobot-go-script up 0 1 robot-move-up)
-(defrobot-go-script down 0 -1 robot-move-up)
+(defrobot-go-script down 0 -1 robot-move-down)
     
