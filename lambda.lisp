@@ -5,12 +5,14 @@
   (lambda (world objects path metadata)
     (values (lambda (x y)
               (if (and (= x lx) (= y ly))
-                  :empty
+                  nil
                   (funcall world x y)))
             (lambda (type)
-              (if (eq type :collected-lambda)
-                  (cons (complex lx ly) (funcall objects type))
-                  (funcall objects type)))
+              (case type
+                (:collected-lambda
+                 (cons (complex lx ly) (funcall objects type)))
+                (:lambda (remove (complex lx ly) (funcall objects type)))
+                (t (funcall objects type))))
             path
             metadata)))
 
