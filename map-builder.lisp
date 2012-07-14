@@ -66,7 +66,8 @@
                           (parse-integer value-string))
              into metadata)))
         (finally
-         (return-from outer (append (list (list :width max-cell-index)
+         (return-from outer (append (list (list :best 0 nil)
+                                          (list :width max-cell-index)
                                           (list :height max-row-index))
                                     metadata)))))
 
