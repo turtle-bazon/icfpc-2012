@@ -34,8 +34,9 @@
              (:rock ,(when (and push-check push-script)
                            `(when (,push-check world metadata rx~ ry~)
                               (list (function ,mover) (,push-script rx~ ry~)))))
-             (:lambda (list (function ,mover) (lambda-collect rx~ ry~)))
-             ((:open-lambda-lift :earth nil) (list (function ,mover)))))))))
+             (:lambda (list (function ,mover) (collect-lambda/open-lift rx~ ry~) (function path-set-cleared)))
+             (:open-lambda-lift (list (function ,mover) (collect-lift rx~ ry~) (function path-set-cleared)))
+             ((:earth nil) (list (function ,mover)))))))))
 
 (defrobot-go-script left -1 0 robot-move-left :push-check rock-can-be-pushed-left :push-script rock-push-left)
 (defrobot-go-script right 1 0 robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right)
