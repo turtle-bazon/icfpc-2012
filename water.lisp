@@ -6,17 +6,19 @@
     (let* ((water-level (+ water (floor (length path) flooding)))
 	   (ry (imagpart (robot-coords objects))))
       (values world
-	      (if (>= water-level ry)
-		  (lambda (type)
-		    (let ((prev-value (funcall objects type)))
+	      (let ((prev-underwater (funcall objects :underwater)))
+		(if (>= water-level ry)
+		    (lambda (type)
 		      (case type
-			(:underwater (if prev-value
-					 (+ prev-value 1)
+			(:underwater (if prev-underwater
+					 (+ prev-underwater 1)
 					 0))
-			(t prev-value))))
-		  (lambda (type)
-		    (case type
-		      (:underwater nil)
-		      (t (funcall objects type)))))
+			(t (funcall objects type))))
+		    (if prev-underwater
+			(lambda (type)
+			  (case type
+			    (:underwater nil)
+			    (t (funcall objects type))))
+			objects)))
 	      path
 	      metadata))))
