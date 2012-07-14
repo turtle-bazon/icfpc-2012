@@ -133,4 +133,4 @@
 	(iter (for x from 1 to width)
 	  (multiple-value-setq (world~ objects~ path~ metadata~)
 	    (funcall (rock-move x y) world~ objects~ path~ metadata~)))))
-    (values world~ objects~ path~ metada~)))
+    (values world~ objects~ path~ metadata~)))
