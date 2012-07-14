@@ -1,0 +1,33 @@
+
+(in-package :lambda-lifter)
+
+(defun step-into-portal (px py)
+  (lambda (world objects path metadata)
+    (let* ((portal (funcall world px py))
+	   (target (cdr (meta-value metadata portal)))
+	   (target-coords (first (funcall objects target)))
+	   (affected-portals (mapcar (lambda (portal-meta) (car portal-meta))
+				     (remove-if-not
+				      (lambda (meta)
+					(and (= (length meta) 2)
+					     (eq (car (cdr meta)) target)))
+				      metadata)))
+	   (affected-portals-coords (mapcar (lambda (aff-portal) (funcall objects aff-portal)) affected-portals)))
+      (values (lambda (x y)
+		(cond ((find-if (lambda (coord)
+				  (and (= x (realpart coord))
+				       (= y (imagpart coord))))
+				affected-portals-coords)
+		       nil)
+		      ((and (= x (realpart target-coords))
+			    (= y (imagpart target-coords)))
+		       :robot)
+		      (t (funcall world x y))))
+	      (lambda (type)
+		(cond ((eq type :robot) (complex (realpart target-coords)
+						 (imagpart target-coords)))
+		      ((eq type target) nil)
+		      ((member type affected-portals) nil)))
+	      path
+	      metadata))))
+

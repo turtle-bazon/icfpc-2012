@@ -6,6 +6,9 @@
                  (collect `(,var (second (assoc ,(form-keyword var) ,metadata))))))
      ,@body))
 
+(defun meta-value (metadata key)
+  (find-if (lambda (meta) (eq (car meta) key)) metadata))
+
 (defun make-mine (stream)
   (let ((objects (make-hash-table :test 'eq)))
     (let* ((metadata (apply-map-parser stream
