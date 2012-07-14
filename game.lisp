@@ -87,7 +87,7 @@
   (game-loop world objects path metadata)
   (let ((best-solve (third (assoc :best metadata))))
     (when best-solve
-      (format nil "~{~a~}" (nreverse (funcall best-solve))))))
+      (format t "~{~a~}" (nreverse (funcall best-solve))))))
 
 ;; Debugging stuff
 
