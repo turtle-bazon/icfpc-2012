@@ -14,8 +14,8 @@
           (:R (decf dx))
           (:U (decf dy))
           (:D (incf dy))
-          (:W (next-iteration))
-          (:cleared (leave)))
+          (:W nil)
+          (:cleared (return-from visited-p nil)))
         (when (and (= dx sample-dx) (= dy sample-dy))
           (return-from visited-p t))))
 

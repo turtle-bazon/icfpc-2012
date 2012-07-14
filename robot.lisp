@@ -23,23 +23,26 @@
 (defrobot-move robot-move-up 0 1 :U)
 (defrobot-move robot-move-down 0 -1 :D)
 
+(defun robot-wait (world objects path metadata)
+  (values world objects (lambda () (cons :W (funcall path))) metadata))
+
 (defmacro defrobot-go-script (name delta-x delta-y mover &key push-check push-script)
   `(defun ,(form-symbol 'robot-go- name '-script) (world objects metadata)
      (with-robot-coords (rx ry) objects
        (let ((rx~ (+ rx ,delta-x)) (ry~ (+ ry ,delta-y)))
          (when (in-range-p metadata rx~ ry~)
            (ecase (funcall world rx~ ry~)
-             (:robot (error "Something wrong: more than one robot encountered"))
              ((:wall :closed-lambda-lift) nil)
              (:rock ,(when (and push-check push-script)
                            `(when (,push-check world metadata rx~ ry~)
                               (list (function ,mover) (,push-script rx~ ry~)))))
              (:lambda (list (function ,mover) (collect-lambda/open-lift rx~ ry~) (function path-set-cleared)))
              (:open-lambda-lift (list (function ,mover) (collect-lift rx~ ry~) (function path-set-cleared)))
-             ((:earth nil) (list (function ,mover)))))))))
+             ((:robot :earth nil) (list (function ,mover)))))))))
 
 (defrobot-go-script left -1 0 robot-move-left :push-check rock-can-be-pushed-left :push-script rock-push-left)
 (defrobot-go-script right 1 0 robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right)
 (defrobot-go-script up 0 1 robot-move-up)
 (defrobot-go-script down 0 -1 robot-move-down)
+(defrobot-go-script wait 0 0 robot-wait)
 
