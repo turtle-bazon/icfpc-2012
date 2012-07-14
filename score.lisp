@@ -8,7 +8,7 @@
         (path-script (funcall path))
         (score 0))
     (with-meta-bind (metadata waterproof)
-      (when (not (> underwater waterproof))
+      (unless (> underwater waterproof)
 	;; 1 point lost for every move made
 	(decf score (length (remove-if-not (lambda (act) (member act '(:L :R :U :D))) path-script)))
 	;; 25 points gained for every Lambda collected 
