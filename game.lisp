@@ -178,7 +178,6 @@
 
 (defun break-script (world objects path metadata)
   (declare (optimize (speed 0) (safety 3) (debug 3)))
-  (print (funcall objects :injury))
   (break)
   (values world objects path metadata))
 
