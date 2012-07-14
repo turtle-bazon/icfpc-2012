@@ -4,12 +4,12 @@
 (defun score (world objects path metadata)
   (declare (ignore world))
   (let ((collected-lambdas (funcall objects :collected-lambda))
-	(underwater (or (funcall objects :underwater) 0))
+	(underwater (funcall objects :underwater))
 	(injury (funcall objects :injury))
         (path-script (funcall path))
         (score 0))
     (with-meta-bind (metadata waterproof)
-      (unless (or (> underwater (or waterproof 0)) injury)
+      (unless (or (and underwater waterproof (>= underwater waterproof)) injury)
 	;; 1 point lost for every move made
 	(decf score (path-length path))
 	;; 25 points gained for every Lambda collected 
