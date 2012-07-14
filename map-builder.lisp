@@ -14,7 +14,7 @@
                                                (gethash type objects))))))
       (with-meta-bind (metadata width height)
         (assert (and width height) nil "Either width or height in metadata not found")
-        (let ((world (make-array (* width height))))
+        (let ((world (make-array (* width height) :initial-element nil)))
           (iter (for (type objects-list) in-hashtable objects)
                 (iter (for coord in objects-list)
                       (setf (elt world coord) type)
@@ -56,6 +56,7 @@
                               (#\* :rock)
                               (#\\ :lambda)
                               (#\L :closed-lambda-lift)
+                              (#\O :open-lambda-lift)
                               (#\. :earth))
                             max-cell-index
                             cell-index
