@@ -55,13 +55,12 @@
                                    (let* ((erx (+ rx (first entry)))
                                           (ery (+ ry (second entry)))
                                           (x-diff (- target-x erx))
-                                          (y-diff (- target-y ery)))
+                                          (y-diff (- target-y ery))
+                                          (type (funcall world erx ery)))
                                      (* (+ (* x-diff x-diff) (* y-diff y-diff))
-                                        (case (funcall world erx ery)
-                                          (nil 1.0)
-                                          (:earth 1.5)
-                                          (:lambda 2.0)
-                                          (t 3.0)))))))
+                                        (if type
+                                            (case type (:earth 1.5) (:lambda 2.0) (t 3.0))
+                                            1.0))))))
               (unless (visited-p dx dy path)
                 (for script = (funcall script-builder world objects metadata))
                 (when script
