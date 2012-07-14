@@ -8,7 +8,7 @@
 	 (<= x width)
 	 (<= y height))))
 
-(defmacro rock-move-values (world objects path metadata rx ry rx-new ry-new)
+(defmacro rock-move-values (world objects path metadata rx ry rx-new ry-new &optional (non-map-update nil))
   `(values (lambda (x y)
 	     (cond ((and (= x ,rx)
 			 (= y ,ry))
@@ -21,6 +21,12 @@
 	     (case type
 	       (:rock (cons (complex ,rx-new ,ry-new)
 			    (remove (complex ,rx ,ry) (funcall ,objects :rock))))
+	       (:injury (if ,non-map-update
+			    nil
+			    (let ((robot-coords (robot-coords objects)))
+			      (when (and (= x (realpart robot-coords))
+					 (= (- y 1) (imagpart robot-coords)))
+				t))))
 	       (t (funcall ,objects type))))
 	   ,path
 	   ,metadata))
@@ -88,7 +94,7 @@
 	  (ry-left ry))
       (when (and (in-range-p metadata rx-left ry-left)
 		 (eq nil (funcall world rx-left ry-left)))
-	(rock-move-values world objects path metadata rx ry rx-left ry-left)))))
+	(rock-move-values world objects path metadata rx ry rx-left ry-left t)))))
 
 (defun rock-push-right (rx ry)
   (lambda (world objects path metadata)
@@ -96,7 +102,7 @@
 	  (ry-right ry))
       (when (and (in-range-p metadata rx-right ry-right)
 		 (eq nil (funcall world rx-right ry-right)))
-	(rock-move-values world objects path metadata rx ry rx-right ry-right)))))
+	(rock-move-values world objects path metadata rx ry rx-right ry-right t)))))
 
 (defun rock-can-be-pushed-left (world metadata rx ry)
   (let ((rx-left (- rx 1))
