@@ -8,7 +8,7 @@
 (defsystem lambda-lifter
   :name "lambda-lifter"
   :version "0.1"
-  :author "swizard"
+  :author "skilful&crafty (swizard and turtle)"
   :licence "icfpc"
   :description "ICFPC 2012: the lambda lifter"
   :depends-on (:iterate :metatilities :split-sequence)
