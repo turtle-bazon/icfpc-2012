@@ -5,3 +5,4 @@
 
 (in-package :lambda-lifter)
 
+(defvar *force-shutdown-p* nil)
