@@ -91,6 +91,23 @@
 
 ;; Debugging stuff
 
+(defun dump-world (world objects path metadata)
+  (declare (ignorable world objects path metadata))
+  (with-meta-bind (metadata width height)
+    (iter (for y from height downto 1)
+      (iter (for x from 1 to width)
+	(format t "~a" (case (funcall world x y)
+			 (:lambda #\\)
+			 (:robot #\R)
+			 (:rock #\*)
+			 (:wall #\#)
+			 (:earth #\.)
+			 (:open-lambda-lift #\O)
+			 (:closed-lambda-lift #\L)
+			 (t #\Space))))
+      (format t "~%")))
+  (values world objects path metadata))
+
 (defun dump-robot (world objects path metadata)
   (format t ";; robot: ~{~a ~}~%" (funcall objects :robot))
   (values world objects path metadata))
@@ -115,66 +132,77 @@
     (multiple-value-call 
         (make-script (list #'dump-rocks
                            #'dump-robot
+			   #'dump-world
                            #'robot-move-left
                            #'rocks-move
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
+			   #'dump-world
                            #'robot-move-left
                            #'rocks-move
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot                                        
+			   #'dump-world
                            #'robot-move-left
                            #'rocks-move
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
+			   #'dump-world
                            #'robot-move-left
                            #'rocks-move
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
+			   #'dump-world
                            #'robot-move-down
                            #'rocks-move
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
+			   #'dump-world
                            #'robot-move-down
                            #'rocks-move
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
+			   #'dump-world
                            #'robot-move-right
                            #'rocks-move
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
+			   #'dump-world
                            #'robot-move-right
                            #'rocks-move
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
+			   #'dump-world
                            #'robot-move-right
                            #'rocks-move
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
+			   #'dump-world
                            #'robot-move-down
                            #'rocks-move                                        
                            #'water-update
                            #'maybe-open-lambda-lift
                            #'dump-rocks                                         
                            #'dump-robot
+			   #'dump-world
                            #'break-script
                            ))
       (make-mine f))))
