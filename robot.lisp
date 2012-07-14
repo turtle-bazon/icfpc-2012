@@ -19,6 +19,7 @@
                (lambda (type)
                  (case type
                    (:robot (list (complex (+ rx ,delta-x) (+ ry ,delta-y))))
+                   (:earth (remove (complex rx ry) (funcall objects type)))
                    (t (funcall objects type))))
                (lambda () (cons ,path-symbol (funcall path)))
                metadata))))
