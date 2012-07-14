@@ -85,6 +85,7 @@
 
 (defun solve-world (world objects path metadata)
   (game-loop world objects path metadata)
+  (dump-world world objects path metadata)
   (let ((best-solve (third (assoc :best metadata))))
     (when best-solve
       (format t "~{~a~}" (nreverse (funcall best-solve))))))
@@ -108,6 +109,10 @@
       (format t "~%")))
   (values world objects path metadata))
 
+(defun dump-injury (world objects path metadata)
+  (format t ";; robot injury: ~a~%" (funcall objects :injury))
+  (values world objects path metadata))
+
 (defun dump-robot (world objects path metadata)
   (format t ";; robot: ~{~a ~}~%" (funcall objects :robot))
   (values world objects path metadata))
@@ -124,8 +129,33 @@
 
 (defun break-script (world objects path metadata)
   (declare (optimize (speed 0) (safety 3) (debug 3)))
+  (print (funcall objects :injury))
   (break)
   (values world objects path metadata))
+
+(defun debug-script (file path)
+  (with-open-file (s file)
+    (multiple-value-call
+	(make-script (cons #'dump-rocks
+			   (cons #'dump-robot
+				 (cons #'dump-world
+				       (iter (for raction in-sequence path)
+					 (ecase raction
+					   (#\L (collect #'robot-move-left))
+					   (#\R (collect #'robot-move-right))
+					   (#\U (collect #'robot-move-up))
+					   (#\D (collect #'robot-move-down))
+					   (#\W )
+					   (#\A ))
+					 (collect #'rocks-move)
+					 (collect #'water-update)
+					 (collect #'maybe-open-lambda-lift)
+					 (collect #'dump-rocks)
+					 (collect #'dump-robot)
+					 (collect #'dump-injury)
+					 (collect #'dump-world)
+					 (collect #'break-script))))))
+      (make-mine s))))
 
 (defun debug-LLLLDDRRRD-script (file)
   (with-open-file (f file)
