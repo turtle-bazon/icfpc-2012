@@ -5,7 +5,7 @@
   (declare (ignore world))
   (let ((collected-lambdas (funcall objects :collected-lambda))
 	(underwater (funcall objects :underwater))
-	(injury (funcall objects :infjury))
+	(injury (funcall objects :injury))
         (path-script (funcall path))
         (score 0))
     (with-meta-bind (metadata waterproof)
