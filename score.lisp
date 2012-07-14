@@ -9,7 +9,7 @@
         (path-script (funcall path))
         (score 0))
     (with-meta-bind (metadata waterproof)
-      (unless (or (and underwater waterproof (>= underwater waterproof)) injury)
+      (unless (or (and underwater waterproof (> underwater waterproof)) injury)
 	;; 1 point lost for every move made
 	(decf score (path-length path))
 	;; 25 points gained for every Lambda collected 

@@ -160,12 +160,12 @@
 
 (defun dump-injury (world objects path metadata)
   (format t ";; robot injury: ~a~%" (funcall objects :injury))
-  (format t ";; robot underwater: ~a~%" (funcall objects :underwater))
   (values world objects path metadata))
 
 (defun dump-robot (world objects path metadata)
-  (format t ";; robot: ~{~a ~}, injury: ~a, underwater: ~a~%"
-	  (funcall objects :robot) (funcall objects :injury) (funcall objects :underwater))
+  (format t ";; robot: ~{~a ~}, injury: ~a, underwater: ~a, score: ~a~%"
+	  (funcall objects :robot) (funcall objects :injury) (funcall objects :underwater)
+	  (score world objects path metadata))
   (values world objects path metadata))
 
 (defun dump-rocks (world objects path metadata)
