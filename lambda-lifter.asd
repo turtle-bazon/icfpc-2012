@@ -18,6 +18,7 @@
                (:file "rock" :depends-on ("map-builder"))
                (:file "score" :depends-on ("map-builder"))
                (:file "robot" :depends-on ("lambda" "rock"))
+	       (:file "water" :depends-on ("robot"))
                (:file "game" :depends-on ("robot" "score"))
                (:file "main" :depends-on ("game"))))
 
