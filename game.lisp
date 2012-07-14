@@ -1,50 +1,43 @@
 
 (in-package :lambda-lifter)
 
-(defun find-nearest-lambda (objects)
+(defun find-nearest-object (type objects)
   (with-robot-coords (rx ry) objects
-    (iter (for lambda-coords in (funcall objects :lambda))
-          (for x-diff = (- rx (realpart lambda-coords)))
-          (for y-diff = (- ry (imagpart lambda-coords)))
+    (iter (for coords in (funcall objects type))
+          (for x-diff = (- rx (realpart coords)))
+          (for y-diff = (- ry (imagpart coords)))
           (for sq-distance = (+ (* x-diff x-diff) (* y-diff y-diff)))
-          (finding lambda-coords minimizing sq-distance))))
+          (finding coords minimizing sq-distance))))
+
+(defun find-nearest-lambda (objects)
+  (find-nearest-object :lambda objects))
 
 (defun choose-target (objects)
-  (let ((lambdas-left (funcall objects :lambda)))
-    (if lambdas-left
-        (find-nearest-lambda objects)
-        (first (funcall objects :open-lambda-lift)))))
-
-(defun visited-p (sample-dx sample-dy path)
-  (iter (with dx = 0)
-        (with dy = 0)
-        (for move in (funcall path))
-        (ecase move
-          (:L (incf dx))
-          (:R (decf dx))
-          (:U (decf dy))
-          (:D (incf dy))
-          (:W (next-iteration)))
-        (when (and (= dx sample-dx) (= dy sample-dy))
-          (return-from visited-p t))))
+  (iter (for possible-targets in '(:lambda :open-lambda-lift))
+        (for nearest-object = (find-nearest-object possible-targets objects))
+        (when nearest-object
+          (return-from choose-target nearest-object))))
 
 (defun robot-ai (world objects path metadata)
-  (with-coords (target-x target-y) (choose-target objects)
-    (with-robot-coords (rx ry) objects
-      (iter (for (dx dy script-builder)
-                 in (sort (list (list -1 0 #'robot-go-left-script)
-                                (list 1 0 #'robot-go-right-script)
-                                (list 0 1 #'robot-go-up-script)
-                                (list 0 -1 #'robot-go-down-script))
-                          #'<
-                          :key (lambda (entry)
-                                 (let ((x-diff (- target-x (+ rx (first entry))))
-                                       (y-diff (- target-y (+ ry (second entry)))))
-                                   (+ (* x-diff x-diff) (* y-diff y-diff))))))              
-            (unless (visited-p dx dy path)
-              (for script = (funcall script-builder world objects metadata))
-              (when script
-                (collect script)))))))
+  (let ((current-target (choose-target objects)))
+    (unless current-target
+      (return-from robot-ai nil))
+    (with-coords (target-x target-y) current-target
+      (with-robot-coords (rx ry) objects
+        (iter (for (dx dy script-builder)
+                   in (sort (list (list -1 0 #'robot-go-left-script)
+                                  (list 1 0 #'robot-go-right-script)
+                                  (list 0 1 #'robot-go-up-script)
+                                  (list 0 -1 #'robot-go-down-script))
+                            #'<
+                            :key (lambda (entry)
+                                   (let ((x-diff (- target-x (+ rx (first entry))))
+                                         (y-diff (- target-y (+ ry (second entry)))))
+                                     (+ (* x-diff x-diff) (* y-diff y-diff))))))            
+              (unless (visited-p dx dy path)
+                (for script = (funcall script-builder world objects metadata))
+                (when script
+                  (collect script))))))))
 
 (defun make-script (script)
   (lambda (world objects path metadata)
@@ -63,7 +56,7 @@
       current-score)))
 
 (defun game-loop (world objects path metadata)
-  (let ((current-score (update-hiscore world objects path metadata)))
+  (let ((current-score (update-hiscore world objects path metadata)))    
     ;; check for extremal condition
     (when (or (not current-score) *force-shutdown-p*)
       (let ((path (lambda () (cons :A (funcall path)))))
@@ -71,14 +64,13 @@
         (return-from game-loop
           (values world objects path metadata))))
     ;; run robot ai and perform the game turn
-    (iter (for robot-step-script in (robot-ai world objects path metadata))          
+    (iter (for robot-step-script in (robot-ai world objects path metadata))
           (unless robot-step-script
             (return-from game-loop
               (values world objects path metadata)))
           (for world-script = (make-script (append robot-step-script
                                                    (list #'rocks-move
                                                          #'water-update
-                                                         #'maybe-open-lambda-lift
                                                          #'game-loop))))
           (funcall world-script world objects path metadata)))
   (values world objects path metadata))
@@ -86,8 +78,7 @@
 (defun solve-world (world objects path metadata)
   (game-loop world objects path metadata)
   (let ((best-solve (third (assoc :best metadata))))
-    (when best-solve
-      (format t "~{~a~}" (nreverse (funcall best-solve))))))
+    (dump-path t best-solve)))
 
 ;; Debugging stuff
 
@@ -166,7 +157,6 @@
 					   (#\A ))
 					 (collect #'rocks-move)
 					 (collect #'water-update)
-					 (collect #'maybe-open-lambda-lift)
 					 (collect #'dump-rocks)
 					 (collect #'dump-robot)
 					 (collect #'dump-injury)
@@ -183,70 +173,60 @@
                            #'robot-move-left
                            #'rocks-move
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
 			   #'dump-world
                            #'robot-move-left
                            #'rocks-move
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot                                        
 			   #'dump-world
                            #'robot-move-left
                            #'rocks-move
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
 			   #'dump-world
                            #'robot-move-left
                            #'rocks-move
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
 			   #'dump-world
                            #'robot-move-down
                            #'rocks-move
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
 			   #'dump-world
                            #'robot-move-down
                            #'rocks-move
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
 			   #'dump-world
                            #'robot-move-right
                            #'rocks-move
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
 			   #'dump-world
                            #'robot-move-right
                            #'rocks-move
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
 			   #'dump-world
                            #'robot-move-right
                            #'rocks-move
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks
                            #'dump-robot
 			   #'dump-world
                            #'robot-move-down
                            #'rocks-move                                        
                            #'water-update
-                           #'maybe-open-lambda-lift
                            #'dump-rocks                                         
                            #'dump-robot
 			   #'dump-world

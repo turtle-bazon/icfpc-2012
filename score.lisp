@@ -11,7 +11,7 @@
     (with-meta-bind (metadata waterproof)
       (unless (or (> underwater (or waterproof 0)) injury)
 	;; 1 point lost for every move made
-	(decf score (length (remove-if-not (lambda (act) (member act '(:L :R :U :D :W))) path-script)))
+	(decf score (path-length path))
 	;; 25 points gained for every Lambda collected 
 	(incf score (* (length collected-lambdas) 25))
 	;; 25 extra points per Lambda collected on executing Abort

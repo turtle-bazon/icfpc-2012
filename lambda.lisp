@@ -1,39 +1,47 @@
 
 (in-package :lambda-lifter)
 
-(defun lambda-collect (lx ly)
-  (lambda (world objects path metadata)
-    (values (lambda (x y)
-              (if (and (= x lx) (= y ly))
-                  :robot
-                  (funcall world x y)))
-            (lambda (type)
-              (case type
-                (:collected-lambda
-                 (cons (complex lx ly) (funcall objects type)))
-                (:lambda (remove (complex lx ly) (funcall objects type)))
-                (t (funcall objects type))))
-            path
-            metadata)))
+(defmacro defcollect (name type &key collect-into)
+  `(defun ,name (lx ly)
+     (declare (optimize (debug 3)))
+     
+     (lambda (world objects path metadata)
 
-(defun maybe-open-lambda-lift (world objects path metadata)
-  (if (funcall objects :open-lambda-lift)
-      (values world objects path metadata)
-      (with-coords (llx lly) (first (funcall objects :closed-lambda-lift))
-        (let ((lambdas-left (funcall objects :lambda)))
-          (values (if lambdas-left
-                      world
-                      (lambda (x y)
+       (when (and (= lx 10) (= ly 1))
+         (break))
+       
+       (values (lambda (x y)
+                 (if (and (= x lx) (= y ly))
+                     :robot
+                     (funcall world x y)))
+               (lambda (type)
+                 (case type
+                   ,@(when collect-into `((,collect-into (cons (complex lx ly) (funcall objects type)))))
+                   (,type (remove (complex lx ly) (funcall objects type)))
+                   (t (funcall objects type))))
+               path
+               metadata))))
+
+(defcollect collect-lambda :lambda :collect-into :collected-lambda)
+(defcollect collect-lift :open-lambda-lift)
+
+(defun collect-lambda/open-lift (lx ly)  
+  (lambda (world objects path metadata)
+    (multiple-value-bind (world objects path metadata)
+        (funcall (collect-lambda lx ly) world objects path metadata)
+      (let ((lambda-lift-coord (first (funcall objects :closed-lambda-lift))))
+        (if (and lambda-lift-coord (null (funcall objects :lambda)))
+            (with-coords (llx lly) lambda-lift-coord
+              (values (lambda (x y)
                         (if (and (= x llx) (= y lly))
                             :open-lambda-lift
-                            (funcall world x y))))
-                  (if lambdas-left
-                      objects
+                            (funcall world x y)))
                       (lambda (type)
                         (case type
                           (:closed-lambda-lift nil)
                           (:open-lambda-lift (list (complex llx lly)))
-                          (t (funcall objects type)))))
-                  path
-                  metadata)))))
+                          (t (funcall objects type))))
+                      path
+                      metadata))
+            (values world objects path metadata))))))
 
