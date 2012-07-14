@@ -124,5 +124,12 @@
 	(funcall (rock-slide-right-over-lambda rx ry) world objects path metadata))))
 
 (defun rocks-move (world objects path metadata)
-  (values world objects path metadata))
-
+  (let ((world~ world)
+	(objects~ objects)
+	(path~ path)
+	(metadata~ metadata))
+    (with-meta-bind (metadata width height)
+      (iter (for y from 1 to height)
+	(iter (for x from 1 to width)
+	  (multiple-value-setq (world~ objects~ path~ metadata~)
+	    (funcall (rock-move x y) world~ objects~ path~ metadata~)))))))
