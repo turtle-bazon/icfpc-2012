@@ -88,3 +88,94 @@
   (let ((best-solve (third (assoc :best metadata))))
     (when best-solve
       (format nil "~{~a~}" (nreverse (funcall best-solve))))))
+
+;; Debugging stuff
+
+(defun dump-robot (world objects path metadata)
+  (format t ";; robot: ~{~a ~}~%" (funcall objects :robot))
+  (values world objects path metadata))
+
+(defun dump-rocks (world objects path metadata)
+  (format t ";; rocks: ~{~a~^, ~}~%"
+          (sort (copy-list (funcall objects :rock) )
+                #'< 
+                :key (lambda (coord) 
+                       (with-coords (x y) coord 
+                         (with-meta-bind (metadata height)
+                           (+ (* y height) x))))))
+  (values world objects path metadata))
+
+(defun break-script (world objects path metadata)
+  (declare (optimize (speed 0) (safety 3) (debug 3)))
+  (break)
+  (values world objects path metadata))
+
+(defun debug-LLLLDDRRRD-script (file)
+  (with-open-file (f file)
+    (multiple-value-call 
+        (make-script (list #'dump-rocks
+                           #'dump-robot
+                           #'robot-move-left
+                           #'rocks-move
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks
+                           #'dump-robot
+                           #'robot-move-left
+                           #'rocks-move
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks
+                           #'dump-robot                                        
+                           #'robot-move-left
+                           #'rocks-move
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks
+                           #'dump-robot
+                           #'robot-move-left
+                           #'rocks-move
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks
+                           #'dump-robot
+                           #'robot-move-down
+                           #'rocks-move
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks
+                           #'dump-robot
+                           #'robot-move-down
+                           #'rocks-move
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks
+                           #'dump-robot
+                           #'robot-move-right
+                           #'rocks-move
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks
+                           #'dump-robot
+                           #'robot-move-right
+                           #'rocks-move
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks
+                           #'dump-robot
+                           #'robot-move-right
+                           #'rocks-move
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks
+                           #'dump-robot
+                           #'robot-move-down
+                           #'rocks-move                                        
+                           #'water-update
+                           #'maybe-open-lambda-lift
+                           #'dump-rocks                                         
+                           #'dump-robot
+                           #'break-script
+                           ))
+      (make-mine f))))
+  

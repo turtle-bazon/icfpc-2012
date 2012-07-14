@@ -47,4 +47,4 @@
 (defrobot-go-script right 1 0 robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right)
 (defrobot-go-script up 0 1 robot-move-up)
 (defrobot-go-script down 0 -1 robot-move-down)
-    
+
