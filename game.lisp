@@ -40,7 +40,7 @@
                           :key (lambda (entry)
                                  (let ((x-diff (- target-x (+ rx (first entry))))
                                        (y-diff (- target-y (+ ry (second entry)))))
-                                   (+ (* x-diff x-diff) (* y-diff y-diff))))))
+                                   (+ (* x-diff x-diff) (* y-diff y-diff))))))              
             (unless (visited-p dx dy path)
               (for script = (funcall script-builder world objects metadata))
               (when script
@@ -53,23 +53,38 @@
             (funcall action world objects path metadata))
           (finally (return (values world objects path metadata))))))
 
-(defun game-loop (world objects path metadata)
+(defun update-hiscore (world objects path metadata)
   (let ((current-score (score world objects path metadata)))
-    (when (and current-score (not *force-shutdown-p*))
+    (when current-score
       (let ((best (assoc :best metadata)))
-        (when (> current-score (second best))
+        (when (and best (> current-score (second best)))
           (setf (second best) current-score
                 (third best) path)))
-      ;; run robot ai and perform the game turn
-      (iter (for robot-step-script in (robot-ai world objects path metadata))
-            (unless robot-step-script
-              (return-from game-loop
-                (values world objects path metadata)))
-            (for world-script = (make-script (append robot-step-script
-                                                     (list #'rocks-move
-                                                           #'water-update
-                                                           #'maybe-open-lambda-lift
-                                                           #'game-loop))))
-            (funcall world-script world objects path metadata))))
+      current-score)))
+
+(defun game-loop (world objects path metadata)
+  (let ((current-score (update-hiscore world objects path metadata)))
+    ;; check for extremal condition
+    (when (or (not current-score) *force-shutdown-p*)
+      (let ((path (lambda () (cons :A (funcall path)))))
+        (update-hiscore world objects path metadata)
+        (return-from game-loop
+          (values world objects path metadata))))
+    ;; run robot ai and perform the game turn
+    (iter (for robot-step-script in (robot-ai world objects path metadata))          
+          (unless robot-step-script
+            (return-from game-loop
+              (values world objects path metadata)))
+          (for world-script = (make-script (append robot-step-script
+                                                   (list #'rocks-move
+                                                         #'water-update
+                                                         #'maybe-open-lambda-lift
+                                                         #'game-loop))))
+          (funcall world-script world objects path metadata)))
   (values world objects path metadata))
 
+(defun solve-world (world objects path metadata)
+  (game-loop world objects path metadata)
+  (let ((best-solve (third (assoc :best metadata))))
+    (when best-solve
+      (format nil "~{~a~}" (nreverse (funcall best-solve))))))
