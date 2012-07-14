@@ -35,7 +35,7 @@
          (when (in-range-p metadata rx~ ry~)
            (ecase (funcall world rx~ ry~)
              (:robot (error "Something wrong: more than one robot encountered"))
-             (:wall nil)
+             ((:wall :closed-lambda-lift) nil)
              (:rock ,(when (and push-check push-script)
                            `(when (,push-check world metadata rx~ ry~)
                               (list (function ,mover) (,push-script rx~ ry~)))))
