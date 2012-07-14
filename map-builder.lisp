@@ -32,43 +32,73 @@
            metadata))))))
 
 (defun apply-map-parser (stream cell-receiver)
-  (iter outer
-        (with state = :reading-map)
-        (with max-cell-index = nil)
-        (for line in-stream stream using #'read-line)
-        (for rev-row-index from 1)
-        (when (zerop (length line))
-          (setf state :reading-weather)
-          (next-iteration))
-        (ecase state
-          (:reading-map
-           (maximizing rev-row-index into max-row-index)
-           (unless max-cell-index
-             (setf max-cell-index (length line)))
-           (iter (for char in-string line)
-                 (for cell-index from 1)
-                 (assert (<= cell-index max-cell-index))
-                 (unless (char= char #\Space)
-                   (funcall cell-receiver
-                            (ecase char
-                              (#\R :robot)
-                              (#\# :wall)
-                              (#\* :rock)
-                              (#\\ :lambda)
-                              (#\L :closed-lambda-lift)
-                              (#\O :open-lambda-lift)
-                              (#\. :earth))
-                            max-cell-index
-                            cell-index
-                            rev-row-index))))
-          (:reading-weather
-           (for (meta value-string) = (split-sequence:split-sequence #\Space line))
-           (collect (list (form-keyword (string-upcase meta))
-                          (parse-integer value-string))
-             into metadata)))
-        (finally
-         (return-from outer (append (list (list :best 0 nil)
-                                          (list :width max-cell-index)
-                                          (list :height max-row-index))
-                                    metadata)))))
+  (multiple-value-bind (map width height)
+      (iter
+	(with state = :reading-map)
+	(with map-width = 0)
+	(with map-height = 0)
+	(for line in-stream stream using #'read-line)
+	(when (zerop (length line))
+	  (setf state nil))
+	(when (eq state :reading-map)
+	  (setf map-width (max map-width (length line)))
+	  (incf map-height))
+	(collect line into lines)
+	(finally (return (values lines map-width map-height))))
+    (iter outer
+      (with state = :reading-map)
+      (for line in map)
+      (for rev-row-index from 1)
+      (when (zerop (length line))
+	(setf state :reading-metadata)
+	(next-iteration))
+      (ecase state
+	(:reading-map
+	 (iter (for char in-string line)
+	   (for cell-index from 1)
+	   (assert (<= cell-index width))
+	   (unless (char= char #\Space)
+	     (funcall cell-receiver
+		      (ecase char
+			(#\R :robot)
+			(#\# :wall)
+			(#\* :rock)
+			(#\\ :lambda)
+			(#\L :closed-lambda-lift)
+			(#\O :open-lambda-lift)
+			(#\. :earth)
+			(#\A :portal-a)
+			(#\B :portal-b)
+			(#\C :portal-c)
+			(#\D :portal-d)
+			(#\E :portal-e)
+			(#\F :portal-f)
+			(#\G :portal-g)
+			(#\H :portal-h)
+			(#\I :portal-i)
+			(#\1 :target-1)
+			(#\2 :target-2)
+			(#\3 :target-3)
+			(#\4 :target-4)
+			(#\5 :target-5)
+			(#\6 :target-6)
+			(#\7 :target-7)
+			(#\8 :target-8)
+			(#\9 :target-9))
+		      width
+		      cell-index
+		      rev-row-index))))
+	(:reading-metadata
+	 (for metasplit = (split-sequence:split-sequence #\Space line))
+	 (let ((pname (form-keyword (string-upcase (first metasplit)))))
+	   (collect (ecase pname
+		      ((:WATER :FLOODING :WATERPROOF) (list pname (parse-integer (second metasplit))))
+		      (:TRAMPOLINE (list (form-keyword (format nil "PORTAL-~a" (string-upcase (second metasplit))))
+					 (form-keyword (format nil "TARGET-~a" (fourth metasplit))))))
+	     into metadata))))
+      (finally
+       (return-from outer (append (list (list :best 0 nil)
+					(list :width width)
+					(list :height height))
+				  metadata))))))
 
