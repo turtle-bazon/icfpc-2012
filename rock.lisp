@@ -130,7 +130,7 @@
 	(path~ path)
 	(metadata~ metadata))
     (with-meta-bind (metadata width)
-      (iter (for rock-coord in (sort (funcall objects :rock) #'<
+      (iter (for rock-coord in (sort (copy-list (funcall objects :rock)) #'<
 				     :key (lambda (c) (+ (realpart c) (* (imagpart c) width)))))
 	(multiple-value-setq (world~ objects~ path~ metadata~)
 	  (funcall (rock-move world metadata (realpart rock-coord) (imagpart rock-coord))
