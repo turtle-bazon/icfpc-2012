@@ -116,13 +116,20 @@
     (and (in-range-p metadata rx-right ry-right)
 	 (eq nil (funcall world rx-right ry-right)))))
 
-(defun rock-move (iworld imetadata rx ry)
+(defun make-m-v-or (&rest clauses)
   (lambda (world objects path metadata)
-    (or (funcall (rock-fall iworld imetadata rx ry) world objects path metadata)
-	(funcall (rock-slide-right iworld imetadata rx ry) world objects path metadata)
-	(funcall (rock-slide-left iworld imetadata rx ry) world objects path metadata)
-	(funcall (rock-slide-right-over-lambda iworld imetadata rx ry) world objects path metadata)
-	(values world objects path metadata))))
+    (iter (for clause in clauses)
+          (multiple-value-bind (world objects path metadata)
+              (funcall clause world objects path metadata)
+            (when world
+              (return (values world objects path metadata))))
+          (finally (return (values world objects path metadata))))))            
+
+(defun rock-move (iworld imetadata rx ry)
+  (make-m-v-or (rock-fall iworld imetadata rx ry)
+               (rock-slide-right iworld imetadata rx ry)
+               (rock-slide-left iworld imetadata rx ry)
+               (rock-slide-right-over-lambda iworld imetadata rx ry)))
 
 (defun rocks-move (world objects path metadata)
   (let ((world~ world)
