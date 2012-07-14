@@ -33,7 +33,8 @@
 			 (cond ((eq type :robot) (list (complex (realpart target-coords)
 								(imagpart target-coords))))
 			       ((eq type target) nil)
-			       ((member type affected-portals) nil)))
+			       ((member type affected-portals) nil)
+			       (t (funcall objects type))))
 		       (lambda () (cons ,path-symbol (funcall path)))
 		       metadata))
 	     (values (lambda (x y)
@@ -58,15 +59,13 @@
 (defun robot-wait (world objects path metadata)
   (values world objects (lambda () (cons :W (funcall path))) metadata))
 
-(defmacro defrobot-go-script (name delta-x delta-y mover &key push-check push-script step-portal-script)
+(defmacro defrobot-go-script (name delta-x delta-y mover &key push-check push-script)
   `(defun ,(form-symbol 'robot-go- name '-script) (world objects metadata)
      (with-robot-coords (rx ry) objects
        (let ((rx~ (+ rx ,delta-x)) (ry~ (+ ry ,delta-y)))
          (when (in-range-p metadata rx~ ry~)
            (ecase (funcall world rx~ ry~)
              ((:wall :closed-lambda-lift :target-1 :target-2 :target-3 :target-4 :target-5 :target-6 :target-7 :target-8 :target-9) nil)
-	     ((:portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i)
-	      #+nil(list (,step-portal-script rx~ ry~)))
              (:rock ,(when (and push-check push-script)
                            `(when (,push-check world metadata rx~ ry~)
                               (list (function ,mover) (,push-script rx~ ry~)))))
@@ -75,10 +74,10 @@
              ((:robot :earth nil) (list (function ,mover)))))))))
 
 
-(defrobot-go-script left -1 0 robot-move-left :push-check rock-can-be-pushed-left :push-script rock-push-left :step-portal-script step-into-portal)
-(defrobot-go-script right 1 0 robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right :step-portal-script step-into-portal)
-(defrobot-go-script up 0 1 robot-move-up :step-portal-script step-into-portal)
-(defrobot-go-script down 0 -1 robot-move-down :step-portal-script step-into-portal)
-(defrobot-go-script wait 0 0 robot-wait :step-portal-script step-into-portal)
+(defrobot-go-script left -1 0 robot-move-left :push-check rock-can-be-pushed-left :push-script rock-push-left)
+(defrobot-go-script right 1 0 robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right)
+(defrobot-go-script up 0 1 robot-move-up)
+(defrobot-go-script down 0 -1 robot-move-down)
+(defrobot-go-script wait 0 0 robot-wait)
 
 

@@ -124,7 +124,7 @@
   (declare (ignorable world objects path metadata))
   (with-meta-bind (metadata width height water flooding)
     (iter
-      (with water-level = (+ water (floor (path-length path) flooding)))
+      (with water-level = (+ (if water water 0) (if flooding (floor (path-length path) flooding) 0)))
       (for y from height downto 1)
       (format t "~a" (if (<= y water-level) "W" " "))
       (iter (for x from 1 to width)
@@ -194,7 +194,7 @@
 					   (#\R (collect #'robot-move-right))
 					   (#\U (collect #'robot-move-up))
 					   (#\D (collect #'robot-move-down))
-					   (#\W )
+					   (#\W (collect #'robot-wait))
 					   (#\A ))
 					 (collect #'rocks-move)
 					 (collect #'water-update)
