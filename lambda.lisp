@@ -17,21 +17,23 @@
             metadata)))
 
 (defun maybe-open-lambda-lift (world objects path metadata)
-  (with-coords (llx lly) (first (funcall objects :closed-lambda-lift))
-    (let ((lambdas-left (funcall objects :lambda)))
-      (values (if lambdas-left
-                  world
-                  (lambda (x y)
-                    (if (and (= x llx) (= y lly))
-                        :open-lambda-lift
-                        (funcall world x y))))
-              (if lambdas-left
-                  objects
-                  (lambda (type)
-                    (case type
-                      (:closed-lambda-lift nil)
-                      (:open-lambda-lift (list (complex llx lly)))
-                      (t (funcall objects type)))))
-              path
-              metadata))))
+  (if (funcall objects :open-lambda-lift)
+      (values world objects path metadata)
+      (with-coords (llx lly) (first (funcall objects :closed-lambda-lift))
+        (let ((lambdas-left (funcall objects :lambda)))
+          (values (if lambdas-left
+                      world
+                      (lambda (x y)
+                        (if (and (= x llx) (= y lly))
+                            :open-lambda-lift
+                            (funcall world x y))))
+                  (if lambdas-left
+                      objects
+                      (lambda (type)
+                        (case type
+                          (:closed-lambda-lift nil)
+                          (:open-lambda-lift (list (complex llx lly)))
+                          (t (funcall objects type)))))
+                  path
+                  metadata)))))
 
