@@ -1,7 +1,8 @@
 (defpackage #:lambda-lifter
   (:use :cl :iterate :metatilities)
   (:shadowing-import-from :metatilities minimize finish)
-  (:export))
+  (:export
+    :main))
 
 (in-package :lambda-lifter)
 
@@ -13,4 +14,10 @@
             (,x (realpart ,my-coords))
             (,y (imagpart ,my-coords)))
        ,@body)))
+
+(defun robot-coords (objects) (first (funcall objects :robot)))
+
+(defmacro with-robot-coords ((x y) objects &body body)
+  `(with-coords (,x ,y) (robot-coords ,objects)
+     ,@body))
 
