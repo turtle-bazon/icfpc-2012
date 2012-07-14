@@ -1,12 +1,6 @@
 
 (in-package :lambda-lifter)
 
-(defun robot-coords (objects) (first (funcall objects :robot)))
-
-(defmacro with-robot-coords ((x y) objects &body body)
-  `(with-coords (,x ,y) (robot-coords ,objects)
-     ,@body))
-
 (defmacro defrobot-move (name delta-x delta-y path-symbol)
   `(defun ,name (world objects path metadata)
      (with-robot-coords (rx ry) objects

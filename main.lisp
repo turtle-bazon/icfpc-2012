@@ -1,10 +1,8 @@
 
 (in-package :lambda-lifter)
 
-(defun game-loop ()
-  nil)
-
-(defun main ()
+(defun main (args)
+  (declare (ignore args))
   (in-package :lambda-lifter)
   (sb-sys:enable-interrupt
    sb-unix:sigint
@@ -14,5 +12,4 @@
       (lambda ()
 	(sb-sys:with-interrupts
 	  (setf *force-shutdown-p* t))))))
-  (game-loop))
-
+  (multiple-value-call #'solve-world (make-mine *standard-input*)))
