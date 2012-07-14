@@ -23,9 +23,9 @@
 			    (remove (complex ,rx ,ry) (funcall ,objects :rock))))
 	       (:injury (if ,non-map-update
 			    nil
-			    (let ((robot-coords (robot-coords objects)))
-			      (when (and (= x (realpart robot-coords))
-					 (= (- y 1) (imagpart robot-coords)))
+                            (with-robot-coords (rbx rby) objects
+			      (when (and (= ,rx-new rbx)
+					 (= (- ,ry-new 1) rby))
 				t))))
 	       (t (funcall ,objects type))))
 	   ,path
@@ -125,3 +125,4 @@
 
 (defun rocks-move (world objects path metadata)
   (values world objects path metadata))
+
