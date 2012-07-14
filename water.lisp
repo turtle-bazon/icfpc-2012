@@ -13,7 +13,7 @@
                           (case type
                             (:underwater (if prev-underwater
                                              (+ prev-underwater 1)
-                                             0))
+                                             1))
                             (t (funcall objects type))))
                         (if prev-underwater
                             (lambda (type)
