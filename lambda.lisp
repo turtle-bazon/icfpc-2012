@@ -17,7 +17,7 @@
                metadata))))
 
 (defcollect collect-lambda :lambda :collect-into :collected-lambda)
-(defcollect collect-lift :open-lambda-lift)
+(defcollect collect-lift :open-lambda-lift :collect-into :collected-lifts)
 
 (defun collect-lambda/open-lift (lx ly)  
   (lambda (world objects path metadata)
