@@ -64,9 +64,6 @@
 
 (defun game-loop (world objects path metadata)
   (let ((current-score (update-hiscore world objects path metadata)))
-    (dump-world world objects path metadata)
-    (format t "Score: ~a~%" current-score)
-    (break)
     ;; check for extremal condition
     (when (or (not current-score) *force-shutdown-p*)
       (let ((path (lambda () (cons :A (funcall path)))))
