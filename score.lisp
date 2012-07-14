@@ -4,7 +4,7 @@
 (defun score (world objects path metadata)
   (declare (ignore world))
   (let ((collected-lambdas (funcall objects :collected-lambda))
-	(underwater (funcall objects :underwater))
+	(underwater (or (funcall objects :underwater) 0))
 	(injury (funcall objects :injury))
         (path-script (funcall path))
         (score 0))
