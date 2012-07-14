@@ -1,39 +1,41 @@
 
 (in-package :lambda-lifter)
 
-(defun exists-path-to-p (ox oy world)
-  (labels ((validate-around (x y history)
-             (let ((history (cons (complex x y) history)))
-               (or (validate-rec (1- x) y history)
-                   (validate-rec (1+ x) y history)
-                   (validate-rec x (1+ y) history)
-                   (validate-rec x (1- y) history))))
-           (validate-rec (x y history)
-             (unless (position (complex x y) history :test #'eql)
-               (case (funcall world x y)
-                 (:robot t)
-                 ((:wall :rock :lambda :closed-lambda-lift :open-lambda-lift) nil)
-                 (t (validate-around x y history))))))
-    (validate-around ox oy '())))
+(defun exists-path-to-p (ox oy world objects path)
+  (with-robot-coords (rx ry) objects
+    (labels ((validate-around (x y history)
+               (let ((history (cons (complex x y) history)))
+                 (or (validate-rec (1- x) y history)
+                     (validate-rec (1+ x) y history)
+                     (validate-rec x (1+ y) history)
+                     (validate-rec x (1- y) history))))
+             (validate-rec (x y history)
+               (unless (or (position (complex x y) history :test #'eql)
+                           (visited-p (- x rx) (- y ry) path))
+                 (case (funcall world x y)
+                   (:robot t)
+                   ((:wall :rock :lambda :closed-lambda-lift :open-lambda-lift) nil)
+                   (t (validate-around x y history))))))
+      (validate-around ox oy '()))))
 
-(defun find-nearest-object (type world objects)
+(defun find-nearest-object (type world objects path)
   (with-robot-coords (rx ry) objects
     (iter (for coords in (funcall objects type))
           (with-coords (ox oy) coords
-            (when (exists-path-to-p ox oy world)
+            (when (exists-path-to-p ox oy world objects path)
               (for x-diff = (- rx ox))
               (for y-diff = (- ry oy))
               (for sq-distance = (+ (* x-diff x-diff) (* y-diff y-diff)))
               (finding coords minimizing sq-distance))))))
 
-(defun choose-target (world objects)
+(defun choose-target (world objects path)
   (iter (for possible-targets in '(:lambda :open-lambda-lift))
-        (for nearest-object = (find-nearest-object possible-targets world objects))
+        (for nearest-object = (find-nearest-object possible-targets world objects path))
         (when nearest-object
           (return-from choose-target nearest-object))))
 
 (defun robot-ai (world objects path metadata)
-  (let ((current-target (choose-target world objects)))
+  (let ((current-target (choose-target world objects path)))
     (unless current-target
       (return-from robot-ai nil))
     (with-coords (target-x target-y) current-target
@@ -74,8 +76,8 @@
 
   ;; (declare (optimize (debug 3)))
   ;; (dump-world world objects path metadata)
-  ;; (format t "Target: ~a; score: ~a~%" (choose-target world objects) (score world objects path metadata))
-  ;; (sleep 0.1)
+  ;; (format t "Target: ~a; score: ~a~%" (choose-target world objects path) (score world objects path metadata))
+  ;; (sleep 0.2)
   
   (let ((current-score (update-hiscore world objects path metadata)))    
     ;; check for extremal condition
