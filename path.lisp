@@ -26,7 +26,7 @@
           (when (member step '(:L :R :U :D :W))
             (push step seq))
           (finally        
-           (format stream "~{~a~}" seq)))))
+           (return (format stream "~{~a~}" seq))))))
 
 (defun path-set-cleared (world objects path metadata)
   (values world objects (lambda () (cons :cleared (funcall path))) metadata))

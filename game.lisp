@@ -1,41 +1,45 @@
 
 (in-package :lambda-lifter)
 
-(defun exists-path-to-p (ox oy world objects path)
-  (with-robot-coords (rx ry) objects
-    (labels ((validate-around (x y history)
-               (let ((history (cons (complex x y) history)))
-                 (or (validate-rec (1- x) y history)
-                     (validate-rec (1+ x) y history)
-                     (validate-rec x (1+ y) history)
-                     (validate-rec x (1- y) history))))
-             (validate-rec (x y history)
-               (unless (or (position (complex x y) history :test #'eql)
-                           (visited-p (- x rx) (- y ry) path))
-                 (case (funcall world x y)
-                   (:robot t)
-                   ((:wall :rock :lambda :closed-lambda-lift :open-lambda-lift) nil)
-                   (t (validate-around x y history))))))
-      (validate-around ox oy '()))))
+(defun estimate-importance (rx ry ox oy width height)
+  (+ (* oy (+ (* width width) (* height height)))
+     (let ((x-diff (- rx ox))
+           (y-diff (- ry oy)))
+       (+ (* x-diff x-diff) (* y-diff y-diff)))))
 
-(defun find-nearest-object (type world objects path)
-  (with-robot-coords (rx ry) objects
-    (iter (for coords in (funcall objects type))
-          (with-coords (ox oy) coords
-            (when (exists-path-to-p ox oy world objects path)
-              (for x-diff = (- rx ox))
-              (for y-diff = (- ry oy))
-              (for sq-distance = (+ (* x-diff x-diff) (* y-diff y-diff)))
-              (finding coords minimizing sq-distance))))))
+(defun exists-path-to-p (rx ry ox oy world path metadata)
+  (labels ((validate-around (x y history)
+             (let ((history (cons (complex x y) history)))
+               (or (validate-rec (1- x) y history)
+                   (validate-rec (1+ x) y history)
+                   (validate-rec x (1+ y) history)
+                   (validate-rec x (1- y) history))))
+           (validate-rec (x y history)
+             (unless (or (position (complex x y) history :test #'eql)
+                         (visited-p (- x rx) (- y ry) path)
+                         (not (in-range-p metadata x y)))
+               (case (funcall world x y)
+                 (:robot t)
+                 ((:wall :rock :lambda :closed-lambda-lift :open-lambda-lift) nil)
+                 (t (validate-around x y history))))))
+    (validate-around ox oy '())))
 
-(defun choose-target (world objects path)
+(defun find-most-important-object (type world objects path metadata)
+  (with-robot-coords (rx ry) objects
+    (with-meta-bind (metadata width height)
+      (iter (for coords in (funcall objects type))
+            (with-coords (ox oy) coords
+              (when (exists-path-to-p rx ry ox oy world path metadata)
+                (finding coords minimizing (estimate-importance rx ry ox oy width height))))))))
+
+(defun choose-target (world objects path metadata)
   (iter (for possible-targets in '(:lambda :open-lambda-lift))
-        (for nearest-object = (find-nearest-object possible-targets world objects path))
+        (for nearest-object = (find-most-important-object possible-targets world objects path metadata))
         (when nearest-object
           (return-from choose-target nearest-object))))
 
 (defun robot-ai (world objects path metadata)
-  (let ((current-target (choose-target world objects path)))
+  (let ((current-target (choose-target world objects path metadata)))
     (unless current-target
       (return-from robot-ai nil))
     (with-coords (target-x target-y) current-target
@@ -48,9 +52,15 @@
                                   (list 0 0 #'robot-go-wait-script))
                             #'<
                             :key (lambda (entry)
-                                   (let ((x-diff (- target-x (+ rx (first entry))))
-                                         (y-diff (- target-y (+ ry (second entry)))))
-                                     (+ (* x-diff x-diff) (* y-diff y-diff))))))
+                                   (let* ((erx (+ rx (first entry)))
+                                          (ery (+ ry (second entry)))
+                                          (x-diff (- target-x erx))
+                                          (y-diff (- target-y ery))
+                                          (type (funcall world erx ery)))
+                                     (* (+ (* x-diff x-diff) (* y-diff y-diff))
+                                        (if type
+                                            (case type (:earth 1.5) (:lambda 2.0) (t 3.0))
+                                            1.0))))))
               (unless (visited-p dx dy path)
                 (for script = (funcall script-builder world objects metadata))
                 (when script
@@ -76,8 +86,9 @@
 
   ;; (declare (optimize (debug 3)))
   ;; (dump-world world objects path metadata)
-  ;; (format t "Target: ~a; score: ~a~%" (choose-target world objects path) (score world objects path metadata))
-  ;; (sleep 0.2)
+  ;; (format t "Target: ~a; score: ~a; path: ~a~%" (choose-target world objects path metadata) (score world objects path metadata) (dump-path nil path))
+  ;; ;;(sleep 0.2)
+  ;; (break)
   
   (let ((current-score (update-hiscore world objects path metadata)))    
     ;; check for extremal condition
@@ -107,8 +118,11 @@
 
 (defun dump-world (world objects path metadata)
   (declare (ignorable world objects path metadata))
-  (with-meta-bind (metadata width height)
-    (iter (for y from height downto 1)
+  (with-meta-bind (metadata width height water flooding)
+    (iter
+      (with water-level = (+ water (floor (path-length path) flooding)))
+      (for y from height downto 1)
+      (format t "~a" (if (<= y water-level) "W" " "))
       (iter (for x from 1 to width)
 	(format t "~a" (case (funcall world x y)
 			 (:lambda #\\)

@@ -3,13 +3,7 @@
 
 (defmacro defcollect (name type &key collect-into)
   `(defun ,name (lx ly)
-     (declare (optimize (debug 3)))
-     
      (lambda (world objects path metadata)
-
-       (when (and (= lx 10) (= ly 1))
-         (break))
-       
        (values (lambda (x y)
                  (if (and (= x lx) (= y ly))
                      :robot
