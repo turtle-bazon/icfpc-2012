@@ -80,8 +80,8 @@
       (when (and (in-range-p imetadata rx-left-under ry-left-under)
 		 (in-range-p imetadata rx-right-under ry-right-under)
 		 (member (funcall iworld rx-under ry-under) '(:rock :horock))
-		 (not (eq nil (funcall iworld rx-right ry-right)))
-		 (not (eq nil (funcall iworld rx-right-under ry-right-under)))
+		 (or (not (eq nil (funcall iworld rx-right ry-right)))
+		     (not (eq nil (funcall iworld rx-right-under ry-right-under))))
 		 (eq nil (funcall iworld rx-left ry-left))
 		 (eq nil (funcall iworld rx-left-under ry-left-under)))
 	(rock-move-values world objects path metadata rx ry rx-left-under ry-left-under
