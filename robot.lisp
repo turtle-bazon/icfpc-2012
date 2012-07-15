@@ -30,11 +30,12 @@
   (let ((razors-count (funcall objects :razors)))
     (if (plusp razors-count)
 	(with-robot-coords (rx ry) objects
-	  (let ((adjacent-beards-coords (iter (for y from (- ry 1) to (+ ry 1))
+	  (let ((adjacent-beards-coords (iter outer
+					  (for y from (- ry 1) to (+ ry 1))
 					  (iter (for x from (- rx 1) to (+ rx 1))
 					    (when (and (in-range-p metadata x y)
 						       (eq :beard (funcall world x y)))
-					      (collect (complex x y)))))))
+					      (in outer (collect (complex x y))))))))
 	    (values (lambda (x y)
 		      (cond ((find-if (lambda (coord)
 					(and (= x (realpart coord))
