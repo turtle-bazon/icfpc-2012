@@ -67,16 +67,12 @@
                     (robot-dist-b (object-sq-dist rx ry tbx tby))
                     (portal-dist-a (object-sq-dist px py tax tay))
                     (portal-dist-b (object-sq-dist px py tbx tby)))
-                (cond ((and will-free-rock-b (not will-free-rock-a)) t)
+                (cond ((and has-flooding-p (< tay tby)) t)
+                      ((and has-flooding-p (> tay tby)) nil)
+                      ((and will-free-rock-b (not will-free-rock-a)) t)
                       ((and will-free-rock-a (not will-free-rock-b)) nil)
-                      ((and has-flooding-p
-                            (or (< tay tby)
-                                (and (= tay tby)
-                                     (> portal-dist-a portal-dist-b)))) t)
-                      ((and has-flooding-p
-                            (or (> tay tby)
-                                (and (= tay tby)
-                                     (> portal-dist-b portal-dist-a)))) nil)
+                      ((and has-flooding-p (> portal-dist-a portal-dist-b)) t)
+                      ((and has-flooding-p (> portal-dist-b portal-dist-a)) nil)
                       (t (< robot-dist-a robot-dist-b)))))))))))
 
 (defun find-most-important-object (type world objects path metadata)
@@ -125,6 +121,14 @@
 
 (deffact score score)
 
+(deffact not-sinking-yet
+  (when (map-has-flooding-p world objects metadata)
+    (with-meta-bind (metadata water flooding waterproof)
+      (let ((underwater (or (funcall objects :underwater) 0))
+            (level (water-level water flooding path)))
+        (and (under-water-p objects level)
+             (< underwater (truncate waterproof 2)))))))
+
 
 (defmacro defmaybe (name fact check-type)
   `(defun ,(form-symbol 'maybe- name) (estimator-a estimator-b k)
@@ -149,6 +153,7 @@
 (defmaybe less-lambdas-eaten fact-lambdas-eaten :less)
 (defmaybe moving-action fact-moving-action :predicate)
 (defmaybe score-better fact-score :more)
+(defmaybe not-sinking-yet fact-not-sinking-yet :predicate)
 
 (defmacro check-facts ((target position-a position-b) &rest clauses)
   (with-gensyms (ea eb)
@@ -164,6 +169,7 @@
   (lambda (position-a position-b)
     (check-facts (target position-a position-b)
                  maybe-target-reached
+                 maybe-not-sinking-yet
                  maybe-less-lambdas-eaten
                  maybe-moving-action
                  maybe-target-nearer
