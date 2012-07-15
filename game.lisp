@@ -202,17 +202,8 @@
 	(make-script (cons #'dump-rocks
 			   (cons #'dump-robot
 				 (cons #'dump-world
-				       (iter (for raction in-sequence path)
-					 (ecase raction
-					   (#\L (collect #'robot-go-left-script))
-					   (#\R (collect #'robot-go-right-script))
-					   (#\U (collect #'robot-go-up-script))
-					   (#\D (collect #'robot-go-down-script))
-					   (#\W (collect #'robot-go-wait-script))
-					   (#\A ))
-					 (collect #'rocks-move)
-					 (collect #'beards-growth)
-					 (collect #'water-update)
+				       (iter (for reaction in-sequence path)
+					 (collect (make-game-turn (form-keyword reaction)))
 					 (collect #'dump-rocks)
 					 (collect #'dump-robot)
 					 (collect #'dump-injury)
