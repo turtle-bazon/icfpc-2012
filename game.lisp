@@ -79,6 +79,8 @@
     (multiple-value-bind (turn-world turn-objects turn-path turn-metadata)
         (values world objects path metadata)
       (iter (for move in (reverse (funcall replay-path)))
+	    (when (eq move :A)
+	       (return (values turn-world turn-objects turn-path turn-metadata)))
             (for turn-proc = (make-game-turn move))
             (multiple-value-bind (new-world new-objects new-path new-metadata)
                 (funcall turn-proc turn-world turn-objects turn-path turn-metadata)

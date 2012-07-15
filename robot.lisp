@@ -65,7 +65,7 @@
 	      (list (function ,mover) (step-into-portal world objects metadata rx~ ry~)))
              (:rock ,(when (and push-check push-script)
                            `(when (,push-check world metadata rx~ ry~)
-                              (list (function ,mover) (,push-script rx~ ry~)))))
+                              (list (,push-script rx~ ry~) (function ,mover)))))
              (:lambda (list (function ,mover) (collect-lambda/open-lift rx~ ry~) (function path-set-cleared)))
 	     (:razor (list (function ,mover) (collect-razor rx~ ry~)))
              (:open-lambda-lift (list (function ,mover) (collect-lift rx~ ry~) (function path-set-cleared)))
