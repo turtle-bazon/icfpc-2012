@@ -83,7 +83,7 @@
         (player (apply #'make-player (funcall objects :route-start))))
     (unless current-target
       (return-from robot-ai nil))
-    (iter (for available-move in '(:L :R :D :U :W))
+    (iter (for available-move in '(:L :R :D :U :W :S))
           (for turn-proc = (make-game-turn available-move))
           (multiple-value-bind (turn-world turn-objects turn-path turn-metadata)
               (funcall turn-proc world objects path metadata)
@@ -123,15 +123,16 @@
 
 (defun game-loop (current-score world objects path metadata)
 
-  ;; (declare (optimize (debug 3)))
-  ;; (dump-world world objects path metadata)
-  ;; (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a"
-  ;;         (choose-target world objects path metadata)
-  ;;         (score world objects path metadata)
-  ;;         (funcall objects :underwater)
-  ;;         (dump-path nil path))
-  ;; ;;(sleep 0.1)
-  ;; (break)
+  #+nil(progn
+    (declare (optimize (debug 3)))
+    (dump-world world objects path metadata)
+    (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a"
+	    (choose-target world objects path metadata)
+	    (score world objects path metadata)
+	    (funcall objects :underwater)
+	    (dump-path nil path))
+    ;; ;;(sleep 0.1)
+    (break))
 
   (update-hiscore current-score objects path metadata)
 
