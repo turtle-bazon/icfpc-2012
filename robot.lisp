@@ -59,14 +59,14 @@
      (declare (ignorable world objects path metadata))
      (with-robot-coords (rx ry) objects
        ,(if (eq path-symbol :S)
-	    `(let ((razors-count (funcall objects :razors))
-		   (beards-around (remove-if-not (lambda (coord)
-						  (with-coords (bx by) coord
-						    (and (>= bx (- rx 1))
-							 (<= bx (+ rx 1))
-							 (>= by (- ry 1))
-							 (<= by (+ ry 1)))))
-						(funcall objects :beard))))
+	    `(symbol-macrolet ((razors-count (funcall objects :razors))
+			       (beards-around (remove-if-not (lambda (coord)
+							       (with-coords (bx by) coord
+								 (and (>= bx (- rx 1))
+								      (<= bx (+ rx 1))
+								      (>= by (- ry 1))
+								      (<= by (+ ry 1)))))
+							     (funcall objects :beard))))
 	       (if (and (> razors-count 0) beards-around)
 		   (list (function ,mover))
 		   nil))
