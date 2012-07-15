@@ -53,7 +53,7 @@
 		    metadata)))
 	(values world objects (lambda () (cons :S (funcall path))) metadata))))
 
-(defmacro defrobot-go-script (name delta-x delta-y mover &key push-check push-script)
+(defmacro defrobot-go-script (name delta-x delta-y path-symbol mover &key push-check push-script)
   `(defun ,(form-symbol 'robot-go- name '-script) (world objects path metadata)
      (declare (ignorable world objects path metadata))
      (with-robot-coords (rx ry) objects
@@ -62,7 +62,7 @@
            (ecase (funcall world rx~ ry~)
              ((:wall :closed-lambda-lift :target-1 :target-2 :target-3 :target-4 :target-5 :target-6 :target-7 :target-8 :target-9) nil)
 	     ((:portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i)
-	      (list (function ,mover) (step-into-portal world objects metadata rx~ ry~)))
+	      (list (step-into-portal rx~ ry~ ,path-symbol)))
              (:rock ,(when (and push-check push-script)
                            `(when (,push-check world metadata rx~ ry~)
                               (list (,push-script rx~ ry~) (function ,mover)))))
@@ -72,10 +72,10 @@
              ((:robot :earth nil) (list (function ,mover)))))))))
 
 
-(defrobot-go-script left -1 0 robot-move-left :push-check rock-can-be-pushed-left :push-script rock-push-left)
-(defrobot-go-script right 1 0 robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right)
-(defrobot-go-script up 0 1 robot-move-up)
-(defrobot-go-script down 0 -1 robot-move-down)
-(defrobot-go-script wait 0 0 robot-wait)
-(defrobot-go-script razor 0 0 robot-apply-razor)
+(defrobot-go-script left -1 0 :L robot-move-left :push-check rock-can-be-pushed-left :push-script rock-push-left)
+(defrobot-go-script right 1 0 :R robot-move-right :push-check rock-can-be-pushed-right :push-script rock-push-right)
+(defrobot-go-script up 0 1 :U robot-move-up)
+(defrobot-go-script down 0 -1 :D robot-move-down)
+(defrobot-go-script wait 0 0 :W robot-wait)
+(defrobot-go-script razor 0 0 :S robot-apply-razor)
 
