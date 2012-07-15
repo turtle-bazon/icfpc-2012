@@ -23,8 +23,10 @@
         (let ((robot-actions (funcall go-script world objects path metadata)))
           (when robot-actions
             (let ((game-turn-script (make-script (append robot-actions
-                                                         (list #'rocks-move
-                                                               #'beards-growth
+                                                         (list (lambda (world objects path metadata)
+								 (multiple-value-bind (world~ objects~ path~ metadata~)
+								     (rocks-move world objects path metadata)
+								   (funcall (beards-growth world objects) world~ objects~ path~ metadata~)))
                                                                #'water-update)))))
               (funcall game-turn-script world objects path metadata))))))))
 

@@ -33,7 +33,7 @@
                       (collect parsed-coord into parsed-coords)
                       (finally (setf (gethash type objects) parsed-coords))))
 	  (setf (gethash :razors objects) razors)
-	  (setf (gethash :growth objects) growth)
+	  (setf (gethash :growth objects) (when growth (- growth 1)))
           (values
            (lambda (x y)
              (assert (and (<= 1 x width) (<= 1 y height)))
