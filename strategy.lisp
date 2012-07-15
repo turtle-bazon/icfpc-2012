@@ -85,7 +85,8 @@
           (when (target-accessible-p ox oy world metadata)
             (collect coords into targets-facts)))
         (finally
-         (return (car (sort targets-facts (make-targets-importancy-comparator world objects path metadata)))))))
+         (when targets-facts
+           (return (car (sort targets-facts (make-targets-importancy-comparator world objects path metadata))))))))
 
 (defun choose-target (world objects path metadata)
   (iter (for possible-targets in '(:lambda :open-lambda-lift :portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i :razor))
