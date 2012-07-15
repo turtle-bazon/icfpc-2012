@@ -1,50 +1,5 @@
 
 (in-package :lambda-lifter)
-
-(defun estimate-importance (rx ry ox oy width height)
-  (+ (* oy (+ (* width width) (* height height)))
-     (let ((x-diff (- rx ox))
-           (y-diff (- ry oy)))
-       (+ (* x-diff x-diff) (* y-diff y-diff)))))
-
-(defun exists-path-to-p (rx ry ox oy world path metadata)
-  (labels ((validate-around (x y history)
-             (let ((history (cons (complex x y) history)))
-               (or (validate-rec (1- x) y history)
-                   (validate-rec (1+ x) y history)
-                   (validate-rec x (1+ y) history)
-                   (validate-rec x (1- y) history))))
-           (validate-rec (x y history)
-             (unless (or (position (complex x y) history :test #'eql)
-                         ;; (visited-p (- x rx) (- y ry) path)
-                         (not (in-range-p metadata x y)))
-               (case (funcall world x y)
-                 (:robot t)
-                 ((:wall :rock :lambda :closed-lambda-lift :open-lambda-lift) nil)
-                 (t (validate-around x y history))))))
-    (validate-around ox oy '())))
-
-(defun find-most-important-object (type world objects path metadata)
-  (with-robot-coords (rx ry) objects
-    (with-meta-bind (metadata width height)
-      (iter (for coords in (funcall objects type))
-            (with-coords (ox oy) coords
-              (when (exists-path-to-p rx ry ox oy world path metadata)
-                (finding coords minimizing (estimate-importance rx ry ox oy width height))))))))
-
-(defun choose-target (world objects path metadata)
-  (iter (for possible-targets in '(:lambda :open-lambda-lift))
-        (for nearest-object = (find-most-important-object possible-targets world objects path metadata))
-        (when nearest-object
-          (return-from choose-target nearest-object))))
-
-(defun estimate-position-weight (target score world objects path metadata)
-  (declare (ignorable target score world objects path metadata))
-  (with-robot-coords (rx ry) objects
-    (with-coords (target-x target-y) target
-      (let ((x-diff (- target-x rx))
-            (y-diff (- target-y ry)))
-        (+ (* x-diff x-diff) (* y-diff y-diff))))))
   
 (defun make-script (script)
   (lambda (world objects path metadata)
@@ -87,36 +42,41 @@
                 (funcall turn-callback turn-world turn-objects turn-path turn-metadata)))
             (finally (return (values turn-world turn-objects turn-path turn-metadata)))))))
   
-(defun visited-p (sample-dx sample-dy path player)
+(defun visited-p (action sample-dx sample-dy path player)
   (funcall player
            path
            (lambda (world objects path metadata)
-             (declare (ignore world path metadata))
+             (declare (ignore world metadata))
              (with-robot-coords (rx ry) objects
-               (when (and (= rx sample-dx) (= ry sample-dy))
+               (when (and (= rx sample-dx)
+                          (= ry sample-dy)
+                          (case action
+                            ((:W :S) (eq (first (funcall path)) action))
+                            (t t)))
                  (return-from visited-p t)))))
   nil)
 
 (defun robot-ai (world objects path metadata player)
   ;; (declare (optimize (debug 3)))
+  
   (let ((current-target (choose-target world objects path metadata)))
     (unless current-target
       (return-from robot-ai nil))
     (iter (for available-move in '(:L :R :D :U :W))
           (for turn-proc = (make-game-turn available-move))
-          (for (values turn-world turn-objects turn-path turn-metadata) =
-                 (funcall turn-proc world objects path metadata))
-          (when (and turn-world turn-objects turn-path turn-metadata)
-            (with-robot-coords (rx ry) turn-objects
-              (unless (visited-p rx ry path player)
-                (for turn-score = (score turn-world turn-objects turn-path turn-metadata))
-                (when turn-score
-                  (for turn-weight = (estimate-position-weight current-target turn-score turn-world turn-objects turn-path turn-metadata))
-                  (collect (list turn-weight turn-score turn-world turn-objects turn-path turn-metadata) into turns)))))
+          (multiple-value-bind (turn-world turn-objects turn-path turn-metadata)
+              (funcall turn-proc world objects path metadata)
+            (when (and turn-world turn-objects turn-path turn-metadata)
+              (with-robot-coords (rx ry) turn-objects
+                (unless (visited-p available-move rx ry path player)
+                  (let ((turn-score (score turn-world turn-objects turn-path turn-metadata))
+                        (move available-move))
+                    (when turn-score
+                      (collect (list move turn-score turn-world turn-objects turn-path turn-metadata) into turns)))))))
           (finally
-           (iter (for (turn-weight turn-score turn-world turn-objects turn-path turn-metadata) in
-                      (sort turns #'> :key #'first))
-                 (game-loop turn-score player turn-world turn-objects turn-path turn-metadata))))))
+           (let ((ordered-turns (sort turns (make-positions-comparator current-target))))
+             (iter (for (move turn-score turn-world turn-objects turn-path turn-metadata) in ordered-turns)
+                   (game-loop turn-score player turn-world turn-objects turn-path turn-metadata)))))))
 
 (defun update-hiscore (current-score path metadata)
   (let ((best (assoc :best metadata)))
@@ -240,73 +200,3 @@
 					 (collect #'break-script))))))
       (make-mine s))))
 
-(defun debug-LLLLDDRRRD-script (file)
-  (with-open-file (f file)
-    (multiple-value-call 
-        (make-script (list #'dump-rocks
-                           #'dump-robot
-			   #'dump-world
-                           #'robot-move-left
-                           #'rocks-move
-                           #'water-update
-                           #'dump-rocks
-                           #'dump-robot
-			   #'dump-world
-                           #'robot-move-left
-                           #'rocks-move
-                           #'water-update
-                           #'dump-rocks
-                           #'dump-robot                                        
-			   #'dump-world
-                           #'robot-move-left
-                           #'rocks-move
-                           #'water-update
-                           #'dump-rocks
-                           #'dump-robot
-			   #'dump-world
-                           #'robot-move-left
-                           #'rocks-move
-                           #'water-update
-                           #'dump-rocks
-                           #'dump-robot
-			   #'dump-world
-                           #'robot-move-down
-                           #'rocks-move
-                           #'water-update
-                           #'dump-rocks
-                           #'dump-robot
-			   #'dump-world
-                           #'robot-move-down
-                           #'rocks-move
-                           #'water-update
-                           #'dump-rocks
-                           #'dump-robot
-			   #'dump-world
-                           #'robot-move-right
-                           #'rocks-move
-                           #'water-update
-                           #'dump-rocks
-                           #'dump-robot
-			   #'dump-world
-                           #'robot-move-right
-                           #'rocks-move
-                           #'water-update
-                           #'dump-rocks
-                           #'dump-robot
-			   #'dump-world
-                           #'robot-move-right
-                           #'rocks-move
-                           #'water-update
-                           #'dump-rocks
-                           #'dump-robot
-			   #'dump-world
-                           #'robot-move-down
-                           #'rocks-move                                        
-                           #'water-update
-                           #'dump-rocks                                         
-                           #'dump-robot
-			   #'dump-world
-                           #'break-script
-                           ))
-      (make-mine f))))
-  
