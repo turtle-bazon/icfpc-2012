@@ -106,8 +106,8 @@
   ;;         (score world objects path metadata)
   ;;         (funcall objects :underwater)
   ;;         (dump-path nil path))
-  ;; ;;(sleep 0.2)
-  ;; (break)
+  ;; (sleep 0.1)
+  ;; ;;(break)
 
   (update-hiscore current-score path metadata)
 
