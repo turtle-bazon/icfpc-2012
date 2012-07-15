@@ -61,7 +61,7 @@
        (let ((rx~ (+ rx ,delta-x)) (ry~ (+ ry ,delta-y)))
          (when (in-range-p metadata rx~ ry~)
            (ecase (funcall world rx~ ry~)
-             ((:wall :closed-lambda-lift :target-1 :target-2 :target-3 :target-4 :target-5 :target-6 :target-7 :target-8 :target-9) nil)
+             ((:wall :closed-lambda-lift :target-1 :target-2 :target-3 :target-4 :target-5 :target-6 :target-7 :target-8 :target-9 :beard) nil)
 	     ((:portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i)
 	      (list (step-into-portal rx~ ry~ ,path-symbol)))
              (:rock ,(when (and push-check push-script)

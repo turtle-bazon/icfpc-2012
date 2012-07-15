@@ -1,20 +1,12 @@
 
 (in-package :lambda-lifter)
 
-(defparameter *map-configurations*
-  '((:FLOOD . ((:WATER . 0) (:FLOODING . 0) (:WATERPROOF . 10)))
-    (:TRAMPOLINE . (:TRAMPOLINE))
-    (:BEARD . ((:GROWTH . 25) (:RAZORS . 0)))))
-
-(defun only-keywords (type-configuration)
-  (mapcar (lambda (param)
-	    (if (listp param)
-		(car param)
-		param))
-	  type-configuration))
-
-(defun map-allowed-keywords (type)
-  (only-keywords (cdr (assoc type *map-configurations*))))
+(defparameter *map-defaults*
+  '((:WATER . 0)
+    (:FLOODING . 0)
+    (:WATERPROOF . 10)
+    (:GROWTH . 25)
+    (:RAZORS . 0)))
 
 (defmacro with-meta-bind ((metadata &rest vars) &body body)
   `(let (,@(iter (for var in vars)
@@ -30,7 +22,7 @@
                                        (lambda (type width x y)
                                          (push (+ (* (1- y) width) (1- x))
                                                (gethash type objects))))))
-      (with-meta-bind (metadata width height configuration)
+      (with-meta-bind (metadata width height growth razors)
         (assert (and width height) nil "Either width or height in metadata not found")
         (let ((world (make-array (* width height) :initial-element nil)))
           (iter (for (type objects-list) in-hashtable objects)
@@ -40,46 +32,32 @@
                                                    (- height (truncate coord width))))
                       (collect parsed-coord into parsed-coords)
                       (finally (setf (gethash type objects) parsed-coords))))
+	  (setf (gethash :razors objects) razors)
+	  (setf (gethash :growth objects) growth)
           (values
            (lambda (x y)
              (assert (and (<= 1 x width) (<= 1 y height)))
              (elt world (+ (* (- height y) width) (1- x))))
            (lambda (type)
 	     (case type
-	       (:razors (when (eq configuration :BEARD)
-			  (with-meta-bind (metadata razors)
-			    razors)))
-	       (:growth (when (eq configuration :BEARD)
-			  (with-meta-bind (metadata growth)
-			    (- growth 1))))
 	       (t (gethash type objects))))
            (lambda () nil)
            metadata))))))
 
 (defun apply-map-parser (stream cell-receiver)
-  (multiple-value-bind (map type width height)
+  (multiple-value-bind (map width height)
       (iter
 	(with state = :reading-map)
-	(with map-type = :GENERAL)
 	(with map-width = 0)
 	(with map-height = 0)
 	(for line in-stream stream using #'read-line)
 	(when (zerop (length line))
-	  (setf state :reading-metadata)
-	  (collect line into lines)
-	  (next-iteration))
-	(ecase state
-	  (:reading-map
-	   (setf map-width (max map-width (length line)))
-	   (incf map-height))
-	  (:reading-metadata
-	   (let* ((metakeyword (form-keyword (string-upcase (first (split-sequence:split-sequence #\Space line)))))
-		  (maptypeforkeyword (car (find-if (lambda (params) (member metakeyword (only-keywords params))) *map-configurations*))))
-	     (assert maptypeforkeyword nil "Unknown meta keyword: ~a" metakeyword)
-	     (assert (or (eq map-type :GENERAL) (eq map-type maptypeforkeyword)) nil "Illegal map type change from ~a to ~a" map-type maptypeforkeyword)
-	     (setf map-type maptypeforkeyword))))
+	  (setf state nil))
+	(when (eq state :reading-map)
+	  (setf map-width (max map-width (length line)))
+	  (incf map-height))
 	(collect line into lines)
-	(finally (return (values lines map-type map-width map-height))))
+	(finally (return (values lines map-width map-height))))
     (iter outer
       (with state = :reading-map)
       (for line in map)
@@ -121,28 +99,25 @@
 			(#\8 :target-8)
 			(#\9 :target-9)
 			(#\W :beard)
-			(#\! :razor))
+			(#\! :razor)
+			(#\@ :horock))
 		      width
 		      cell-index
 		      rev-row-index))))
 	(:reading-metadata
 	 (for metasplit = (split-sequence:split-sequence #\Space line))
 	 (let ((pname (form-keyword (string-upcase (first metasplit)))))
-	   (collect (case type
+	   (collect (case pname
 		      (:TRAMPOLINE (list (form-keyword (format nil "PORTAL-~a" (string-upcase (second metasplit))))
 					 (form-keyword (format nil "TARGET-~a" (fourth metasplit)))))
 		      (t (list pname (parse-integer (second metasplit)))))
 	     into metadata))))
       (finally
-       (return-from outer (append (list (list :configuration type)
-					(list :best 0 nil)
+       (return-from outer (append (list (list :best 0 nil)
 					(list :width width)
 					(list :height height))
 				  metadata
-				  (unless (eq type :TRAMPOLINE)
-				  (iter (for maptypeparam in (map-allowed-keywords type))
-				    (unless (assoc maptypeparam metadata)
-				      (collect (list maptypeparam
-						     (cdr (assoc maptypeparam
-								 (cdr (assoc type *map-configurations*)))))))))))))))
+				  (iter (for (param . default-value) in *map-defaults*)
+				    (unless (assoc param metadata)
+				      (collect (list param default-value))))))))))
 
