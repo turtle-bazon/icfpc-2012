@@ -18,6 +18,7 @@
            (:W #'robot-go-wait-script)
            (:S #'robot-go-razor-script))))
     (lambda (world objects path metadata)
+;;      (declare (optimize (debug 3)))
       (when go-script
         (let ((robot-actions (funcall go-script world objects path metadata)))
           (when robot-actions
@@ -99,22 +100,25 @@
              (iter (for (move turn-score turn-world turn-objects turn-path turn-metadata) in ordered-turns)
                    (game-loop turn-score turn-world turn-objects turn-path turn-metadata)))))))
 
-(defun update-hiscore (current-score path metadata)
-  (let ((best (assoc :best metadata)))
-    (when (and best (> current-score (second best)))
-      (setf (second best) current-score
-            (third best) path))
-    (when (or *force-shutdown-p* *force-dump-results-p*)
-      (let* ((best-path (or (third best) (lambda () nil)))
-             (best-score (or (second best) 0))
-             (current-best-path (if (eq (car (funcall best-path)) :A) best-path (lambda () (cons :A (funcall best-path)))))
-             (current-best-score best-score))
-        (if *force-dump-results-p*
-            (progn
-              (setf *force-dump-results-p* nil)
-              (dump-path t current-best-path))
-            (setf (second best) current-best-score
-                  (third best) current-best-path)))))
+(defun update-hiscore (current-score objects path metadata)
+  (flet ((maybe-abort-path (path)
+           (if (or (funcall objects :collected-lifts)
+                   (eq (car (funcall path)) :A))
+               path
+               (lambda () (cons :A (funcall path))))))
+    (let* ((best (assoc :best metadata))
+           (best-path (or (third best) (lambda () nil)))
+           (best-score (or (second best) 0))
+           (current-best-path (maybe-abort-path best-path))
+           (current-best-score best-score))
+      (when (> current-score best-score)
+        (setf (second best) current-score
+              (third best) path)
+        (when *force-dump-results-p*
+          (format t ";; New best score: ~a as ~a" current-score (dump-path nil (maybe-abort-path path)))))
+      (when *force-shutdown-p*
+        (setf (second best) current-best-score
+              (third best) current-best-path))))
   current-score)
 
 (defun game-loop (current-score world objects path metadata)
@@ -129,10 +133,10 @@
   ;; ;;(sleep 0.1)
   ;; (break)
 
-  (update-hiscore current-score path metadata)
+  (update-hiscore current-score objects path metadata)
 
-  ;; check for extremal condition
-  (when *force-shutdown-p*
+  ;; check for extremal or winning condition
+  (when (or *force-shutdown-p* (funcall objects :collected-lifts))
     (return-from game-loop))
   
   ;; run robot ai and perform the game turn
