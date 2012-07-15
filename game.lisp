@@ -91,7 +91,7 @@
       (let ((best-path (or (third best) (lambda () nil)))
             (best-score (or (second best) 0)))
         (setf (second best) best-score
-              (third best) (if (eq (car (funcall best-path)) :A) path (lambda () (cons :A (funcall best-path))))))))
+              (third best) (if (eq (car (funcall best-path)) :A) best-path (lambda () (cons :A (funcall best-path))))))))
   current-score)
 
 (defun game-loop (current-score player world objects path metadata)
