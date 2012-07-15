@@ -1,22 +1,70 @@
 
 (in-package :lambda-lifter)
 
-(defun estimate-importance (rx ry ox oy width height)
-  (+ (* oy (+ (* width width) (* height height)))
-     (let ((x-diff (- rx ox))
-           (y-diff (- ry oy)))
-       (+ (* x-diff x-diff) (* y-diff y-diff)))))
+(defun target-accessible-p (target-x target-y world metadata)
+  (labels ((examine-accessible (x y)
+             (case (funcall world x y)
+               ((:robot :target-1 :target-2 :target-3 :target-4 :target-5 :target-6 :target-7 :target-8 :target-9)
+                (return-from target-accessible-p t))
+               ((:wall :rock :lambda :closed-lambda-lift :open-lambda-lift
+                       :portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i
+                       :beard :razor)
+                nil)
+               (t t)))
+           (examine-around (x y history)
+             (iter (for (dx dy) in (list (list (1- x) y)
+                                         (list (1+ x) y)
+                                         (list x (1+ y))
+                                         (list x (1- y))))
+                   (when (and (in-range-p metadata dx dy)
+                              (examine-accessible dx dy)
+                              (not (position (complex dx dy) history)))
+                     (collect (list dx dy) into accessible-list))
+                   (finally
+                    (iter (for (dx dy) in accessible-list)
+                          (examine-around dx dy (cons (complex x y) history)))))))
+    (examine-around target-x target-y (list (complex target-x target-y)))))
+
+(defun object-sq-dist (rx ry ox oy)
+  (let ((x-diff (- rx ox))
+        (y-diff (- ry oy)))
+    (+ (* x-diff x-diff) (* y-diff y-diff))))
+
+(defun will-free-a-rock (ox oy world objects path metadata)
+  (let ((object-type (funcall world ox oy)))
+    (multiple-value-bind (world objects path metadata)
+        (rocks-move (lambda (x y)
+                      (if (and (= x ox) (= y oy))
+                          nil
+                          (funcall world x y)))
+                    (lambda (type)
+                      (if (eq type object-type)
+                          (remove (complex ox oy) (funcall objects type))
+                          (funcall objects type)))
+                    path
+                    metadata)
+      (declare (ignore objects path metadata))
+      (eq (funcall world ox oy) :rock))))
 
 (defun find-most-important-object (type world objects path metadata)
-  (declare (ignore world path))
   (with-robot-coords (rx ry) objects
-    (with-meta-bind (metadata width height)
-      (iter (for coords in (funcall objects type))
-            (with-coords (ox oy) coords
-              (finding coords minimizing (estimate-importance rx ry ox oy width height)))))))
+    (iter (for coords in (funcall objects type))
+          (with-coords (ox oy) coords
+            (when (target-accessible-p ox oy world metadata)
+              (collect (list coords
+                             (object-sq-dist rx ry ox oy)
+                             (will-free-a-rock ox oy world objects path metadata))
+                into targets-facts)))
+          (finally
+           (return 
+             (caar (sort targets-facts
+                         (lambda (facts-a facts-b)
+                           (cond ((and (third facts-b) (not (third facts-a))) t)
+                                 ((and (third facts-a) (not (third facts-b))) nil)
+                                 (t (< (second facts-a) (second facts-b))))))))))))
 
 (defun choose-target (world objects path metadata)
-  (iter (for possible-targets in '(:lambda :open-lambda-lift))
+  (iter (for possible-targets in '(:lambda :open-lambda-lift :portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i :razor))
         (for nearest-object = (find-most-important-object possible-targets world objects path metadata))
         (when nearest-object
           (return-from choose-target nearest-object))))
@@ -82,7 +130,7 @@
     (labels ((builder (maybes)
                (if maybes
                    `(,(car maybes) ,ea ,eb (lambda () ,(builder (cdr maybes))))
-                   't)))
+                   'nil)))
       `(let ((,ea (apply #'make-estimator ,target ,position-a))
              (,eb (apply #'make-estimator ,target ,position-b)))
          ,(builder clauses)))))
