@@ -16,6 +16,22 @@
 (defun meta-value (metadata key)
   (find-if (lambda (meta) (eq (car meta) key)) metadata))
 
+(defun map-has-flooding-p (world objects metadata)
+  (declare (ignore world objects metadata))
+  t)
+
+(defun map-has-portals-p (world objects metadata)
+  (declare (ignore world objects metadata))
+  t)
+
+(defun map-has-beards-p (world objects metadata)
+  (declare (ignore world objects metadata))
+  t)
+
+(defun map-has-horocks-p (world objects metadata)
+  (declare (ignore world objects metadata))
+  t)
+
 (defun make-mine (stream)
   (let ((objects (make-hash-table :test 'eq)))
     (let* ((metadata (apply-map-parser stream
