@@ -25,20 +25,43 @@
                           (examine-around dx dy (cons (complex x y) history)))))))
     (examine-around target-x target-y (list (complex target-x target-y)))))
 
-(defun estimate-importance (rx ry ox oy width height)
-  (declare (ignore width height))
+(defun object-sq-dist (rx ry ox oy)
   (let ((x-diff (- rx ox))
         (y-diff (- ry oy)))
     (+ (* x-diff x-diff) (* y-diff y-diff))))
 
+(defun will-free-a-rock (ox oy world objects path metadata)
+  (let ((object-type (funcall world ox oy)))
+    (multiple-value-bind (world objects path metadata)
+        (rocks-move (lambda (x y)
+                      (if (and (= x ox) (= y oy))
+                          nil
+                          (funcall world x y)))
+                    (lambda (type)
+                      (if (eq type object-type)
+                          (remove (complex ox oy) (funcall objects type))
+                          (funcall objects type)))
+                    path
+                    metadata)
+      (declare (ignore objects path metadata))
+      (eq (funcall world ox oy) :rock))))
+
 (defun find-most-important-object (type world objects path metadata)
-  (declare (ignore path))
   (with-robot-coords (rx ry) objects
-    (with-meta-bind (metadata width height)
-      (iter (for coords in (funcall objects type))
-            (with-coords (ox oy) coords
-              (when (target-accessible-p ox oy world metadata)
-                (finding coords minimizing (estimate-importance rx ry ox oy width height))))))))
+    (iter (for coords in (funcall objects type))
+          (with-coords (ox oy) coords
+            (when (target-accessible-p ox oy world metadata)
+              (collect (list coords
+                             (object-sq-dist rx ry ox oy)
+                             (will-free-a-rock ox oy world objects path metadata))
+                into targets-facts)))
+          (finally
+           (return 
+             (caar (sort targets-facts
+                         (lambda (facts-a facts-b)
+                           (cond ((and (third facts-b) (not (third facts-a))) t)
+                                 ((and (third facts-a) (not (third facts-b))) nil)
+                                 (t (< (second facts-a) (second facts-b))))))))))))
 
 (defun choose-target (world objects path metadata)
   (iter (for possible-targets in '(:lambda :open-lambda-lift :portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i :razor))
