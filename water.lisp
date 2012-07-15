@@ -3,7 +3,8 @@
 
 (defun water-update (world objects path metadata)
   (with-meta-bind (metadata water flooding)
-    (if (and water flooding)
+    (if (and water flooding
+	     (/= flooding 0))
         (let* ((water-level (+ water (floor (path-length path) flooding)))
                (ry (imagpart (robot-coords objects))))
           (values world
