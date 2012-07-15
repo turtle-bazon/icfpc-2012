@@ -176,9 +176,9 @@
   (values world objects path metadata))
 
 (defun dump-robot (world objects path metadata)
-  (format t ";; robot: ~{~a ~}, injury: ~a, underwater: ~a, score: ~a~%"
+  (format t ";; robot: ~{~a ~}, injury: ~a, underwater: ~a, score: ~a, razors: ~a~%"
 	  (funcall objects :robot) (funcall objects :injury) (funcall objects :underwater)
-	  (score world objects path metadata))
+	  (score world objects path metadata) (funcall objects :razor)) 
   (values world objects path metadata))
 
 (defun dump-rocks (world objects path metadata)

@@ -18,6 +18,7 @@
 
 (defcollect collect-lambda :lambda :collect-into :collected-lambda)
 (defcollect collect-lift :open-lambda-lift :collect-into :collected-lifts)
+(defcollect collect-razor :razor :collect-into :razors)
 
 (defun collect-lambda/open-lift (lx ly)  
   (lambda (world objects path metadata)
