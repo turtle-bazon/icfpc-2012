@@ -98,6 +98,7 @@
                            `(when (,push-check world metadata rx~ ry~)
                               (list (function ,mover) (,push-script rx~ ry~)))))
              (:lambda (list (function ,mover) (collect-lambda/open-lift rx~ ry~) (function path-set-cleared)))
+	     (:razor (list (function ,mover) (collect-razor rx~ ry~)))
              (:open-lambda-lift (list (function ,mover) (collect-lift rx~ ry~) (function path-set-cleared)))
              ((:robot :earth nil) (list (function ,mover)))))))))
 
