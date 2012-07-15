@@ -30,7 +30,7 @@
                                        (lambda (type width x y)
                                          (push (+ (* (1- y) width) (1- x))
                                                (gethash type objects))))))
-      (with-meta-bind (metadata width height)
+      (with-meta-bind (metadata width height razors)
         (assert (and width height) nil "Either width or height in metadata not found")
         (let ((world (make-array (* width height) :initial-element nil)))
           (iter (for (type objects-list) in-hashtable objects)
@@ -45,7 +45,9 @@
              (assert (and (<= 1 x width) (<= 1 y height)))
              (elt world (+ (* (- height y) width) (1- x))))
            (lambda (type)
-             (gethash type objects))
+	     (case type
+	       (:RAZORS razors)
+	       (t (gethash type objects))))
            (lambda () nil)
            metadata))))))
 
