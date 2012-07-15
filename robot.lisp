@@ -59,6 +59,33 @@
 (defun robot-wait (world objects path metadata)
   (values world objects (lambda () (cons :W (funcall path))) metadata))
 
+(defun robot-apply-razor (world objects path metadata)
+  (let ((razors-count (funcall objects :razors)))
+    (if (plusp razors-count)
+	(with-robot-coords (rx ry) objects
+	  (let ((adjacent-beards-coords (iter (for y from (- ry 1) to (+ ry 1))
+					  (iter (for x from (- rx 1) to (+ rx 1))
+					    (when (and (in-range-p metadata x y)
+						       (eq :beard (funcall world x y)))
+					      (collect (complex x y)))))))
+	    (values (lambda (x y)
+		      (cond ((find-if (lambda (coord)
+					(and (= x (realpart coord))
+					     (= y (imagpart coord))))
+				      adjacent-beards-coords)
+			     nil)
+			    (t (funcall world x y))))
+		    (lambda (type)
+		      (case type
+			(:beard (remove-if (lambda (coord)
+					     (member coord adjacent-beards-coords))
+					   (funcall objects type)))
+			(:razors (- (funcall objects type) 1))
+			(t (funcall objects type))))
+		    (lambda () (cons :S (funcall path)))
+		    metadata)))
+	(values world objects (lambda () (cons :S (funcall path))) metadata))))
+
 (defmacro defrobot-go-script (name delta-x delta-y mover &key push-check push-script)
   `(defun ,(form-symbol 'robot-go- name '-script) (world objects metadata)
      (with-robot-coords (rx ry) objects
@@ -79,5 +106,4 @@
 (defrobot-go-script up 0 1 robot-move-up)
 (defrobot-go-script down 0 -1 robot-move-down)
 (defrobot-go-script wait 0 0 robot-wait)
-
 
