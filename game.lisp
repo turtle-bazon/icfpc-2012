@@ -16,7 +16,7 @@
                    (validate-rec x (1- y) history))))
            (validate-rec (x y history)
              (unless (or (position (complex x y) history :test #'eql)
-                         (visited-p (- x rx) (- y ry) path)
+                         ;; (visited-p (- x rx) (- y ry) path)
                          (not (in-range-p metadata x y)))
                (case (funcall world x y)
                  (:robot t)
@@ -48,7 +48,6 @@
   
 (defun make-script (script)
   (lambda (world objects path metadata)
-    (declare (optimize (debug 3)))
     (iter (for action in script)
           (multiple-value-setq (world objects path metadata)
             (funcall action world objects path metadata))
@@ -57,6 +56,7 @@
 (defun make-game-turn (move)
   (let ((go-script 
          (ecase move
+           (:cleared nil)
            (:L #'robot-go-left-script)
            (:R #'robot-go-right-script)
            (:D #'robot-go-down-script)
@@ -64,15 +64,40 @@
            (:W #'robot-go-wait-script)
            (:S #'robot-go-razor-script))))
     (lambda (world objects path metadata)
-      (let ((robot-actions (funcall go-script world objects path metadata)))
-        (when robot-actions
-          (let ((game-turn-script (make-script (append robot-actions
-                                                       (list #'rocks-move
-                                                             #'beards-growth
-                                                             #'water-update)))))
-            (funcall game-turn-script world objects path metadata)))))))
+      (when go-script
+        (let ((robot-actions (funcall go-script world objects path metadata)))
+          (when robot-actions
+            (let ((game-turn-script (make-script (append robot-actions
+                                                         (list #'rocks-move
+                                                               #'beards-growth
+                                                               #'water-update)))))
+              (funcall game-turn-script world objects path metadata))))))))
 
-(defun robot-ai (world objects path metadata)
+(defun make-player (world objects path metadata)
+  (lambda (replay-path turn-callback)
+    (multiple-value-bind (turn-world turn-objects turn-path turn-metadata)
+        (values world objects path metadata)
+      (iter (for move in (reverse (funcall replay-path)))
+            (for turn-proc = (make-game-turn move))
+            (multiple-value-bind (new-world new-objects new-path new-metadata)
+                (funcall turn-proc turn-world turn-objects turn-path turn-metadata)
+              (when (and new-world new-objects new-path new-metadata)
+                (multiple-value-setq (turn-world turn-objects turn-path turn-metadata)
+                  (values new-world new-objects new-path new-metadata))
+                (funcall turn-callback turn-world turn-objects turn-path turn-metadata)))
+            (finally (return (values turn-world turn-objects turn-path turn-metadata)))))))
+  
+(defun visited-p (sample-dx sample-dy path player)
+  (funcall player
+           path
+           (lambda (world objects path metadata)
+             (declare (ignore world path metadata))
+             (with-robot-coords (rx ry) objects
+               (when (and (= rx sample-dx) (= ry sample-dy))
+                 (return-from visited-p t)))))
+  nil)
+
+(defun robot-ai (world objects path metadata player)
   ;; (declare (optimize (debug 3)))
   (let ((current-target (choose-target world objects path metadata)))
     (unless current-target
@@ -82,15 +107,16 @@
           (for (values turn-world turn-objects turn-path turn-metadata) =
                  (funcall turn-proc world objects path metadata))
           (when (and turn-world turn-objects turn-path turn-metadata)
-            (for turn-score = (score turn-world turn-objects turn-path turn-metadata))
-            (when turn-score
-              (for turn-weight = (estimate-position-weight current-target turn-score turn-world turn-objects turn-path turn-metadata))
-              (collect (list turn-weight turn-score turn-world turn-objects turn-path turn-metadata) into turns)))
+            (with-robot-coords (rx ry) turn-objects
+              (unless (visited-p rx ry path player)
+                (for turn-score = (score turn-world turn-objects turn-path turn-metadata))
+                (when turn-score
+                  (for turn-weight = (estimate-position-weight current-target turn-score turn-world turn-objects turn-path turn-metadata))
+                  (collect (list turn-weight turn-score turn-world turn-objects turn-path turn-metadata) into turns)))))
           (finally
-           (break)
            (iter (for (turn-weight turn-score turn-world turn-objects turn-path turn-metadata) in
                       (sort turns #'> :key #'first))
-                 (game-loop turn-score turn-world turn-objects turn-path turn-metadata))))))
+                 (game-loop turn-score player turn-world turn-objects turn-path turn-metadata))))))
 
 (defun update-hiscore (current-score path metadata)
   (let ((best (assoc :best metadata)))
@@ -102,7 +128,7 @@
         (setf (third best) (lambda () (cons :A (funcall best-path)))))))
   current-score)
 
-(defun game-loop (current-score world objects path metadata)
+(defun game-loop (current-score player world objects path metadata)
 
   ;; (declare (optimize (debug 3)))
   ;; (dump-world world objects path metadata)
@@ -121,12 +147,13 @@
     (return-from game-loop))
   
   ;; run robot ai and perform the game turn
-  (robot-ai world objects path metadata))  
+  (robot-ai world objects path metadata player))
 
 (defun solve-world (world objects path metadata)
-  (game-loop 0 world objects path metadata)
-  (let ((best-solve (third (assoc :best metadata))))
-    (dump-path t best-solve)))
+  (let ((player (make-player world objects path metadata)))
+    (game-loop 0 player world objects path metadata)
+    (let ((best-solve (third (assoc :best metadata))))
+      (dump-path t best-solve))))
 
 ;; Debugging stuff
 
