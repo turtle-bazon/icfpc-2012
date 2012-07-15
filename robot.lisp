@@ -87,7 +87,8 @@
 	(values world objects (lambda () (cons :S (funcall path))) metadata))))
 
 (defmacro defrobot-go-script (name delta-x delta-y mover &key push-check push-script)
-  `(defun ,(form-symbol 'robot-go- name '-script) (world objects metadata)
+  `(defun ,(form-symbol 'robot-go- name '-script) (world objects path metadata)
+     (declare (ignorable world objects path metadata))
      (with-robot-coords (rx ry) objects
        (let ((rx~ (+ rx ,delta-x)) (ry~ (+ ry ,delta-y)))
          (when (in-range-p metadata rx~ ry~)
@@ -106,4 +107,5 @@
 (defrobot-go-script up 0 1 robot-move-up)
 (defrobot-go-script down 0 -1 robot-move-down)
 (defrobot-go-script wait 0 0 robot-wait)
+(defrobot-go-script razor 0 0 robot-apply-razor)
 

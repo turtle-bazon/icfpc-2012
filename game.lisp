@@ -38,83 +38,82 @@
         (when nearest-object
           (return-from choose-target nearest-object))))
 
-(defun robot-ai (world objects path metadata)
-  (let ((current-target (choose-target world objects path metadata)))
-    (unless current-target
-      (return-from robot-ai nil))
-    (with-coords (target-x target-y) current-target
-      (with-robot-coords (rx ry) objects
-        (iter (for (dx dy script-builder)
-                   in (sort (list (list -1 0 #'robot-go-left-script)
-                                  (list 1 0 #'robot-go-right-script)
-                                  (list 0 1 #'robot-go-up-script)
-                                  (list 0 -1 #'robot-go-down-script)
-                                  (list 0 0 #'robot-go-wait-script))
-                            #'<
-                            :key (lambda (entry)
-                                   (let* ((erx (+ rx (first entry)))
-                                          (ery (+ ry (second entry)))
-                                          (x-diff (- target-x erx))
-                                          (y-diff (- target-y ery))
-                                          (type (funcall world erx ery)))
-                                     (* (+ (* x-diff x-diff) (* y-diff y-diff))
-                                        (if type
-                                            (case type (:earth 1.5) (:lambda 2.0) (t 3.0))
-                                            1.0))))))
-              (unless (visited-p dx dy path)
-                (for script = (funcall script-builder world objects metadata))
-                (when script
-                  (collect script))))))))
-
+(defun estimate-position-weight (target score world objects path metadata)
+  (declare (ignorable target score world objects path metadata))
+  (with-robot-coords (rx ry) objects
+    (with-coords (target-x target-y) target
+      (let ((x-diff (- target-x rx))
+            (y-diff (- target-y ry)))
+        (+ (* x-diff x-diff) (* y-diff y-diff))))))
+  
 (defun make-script (script)
   (lambda (world objects path metadata)
+    (declare (optimize (debug 3)))
     (iter (for action in script)
           (multiple-value-setq (world objects path metadata)
             (funcall action world objects path metadata))
           (finally (return (values world objects path metadata))))))
 
-(defun update-hiscore (world objects path metadata)
-  (let ((current-score (score world objects path metadata)))
-    (when current-score
-      (let ((best (assoc :best metadata)))
-        (when (and best (> current-score (second best)))
-          (setf (second best) current-score
-                (third best) path)))
-      current-score)))
+(defun robot-ai (world objects path metadata)
+  (let ((current-target (choose-target world objects path metadata)))
+    (unless current-target
+      (return-from robot-ai nil))
+    (iter (for script-builder in (list #'robot-go-left-script
+                                       #'robot-go-right-script
+                                       #'robot-go-up-script
+                                       #'robot-go-down-script
+                                       #'robot-go-wait-script
+                                       ;;#'robot-go-razor-script
+                                       ))
+          (for robot-actions = (funcall script-builder world objects path metadata))
+          (when robot-actions
+            (for game-turn-script = (make-script (append robot-actions
+                                                         (list #'rocks-move
+                                                               #'water-update))))
+            (for (values turn-world turn-objects turn-path turn-metadata) =
+                 (funcall game-turn-script world objects path metadata))
+            (for turn-score = (score turn-world turn-objects turn-path turn-metadata))
+            (when turn-score
+              (for turn-weight = (estimate-position-weight current-target turn-score turn-world turn-objects turn-path turn-metadata))
+              (collect (list turn-weight turn-score turn-world turn-objects turn-path turn-metadata) into turns)))
+          (finally
+           (iter (for (turn-weight turn-score turn-world turn-objects turn-path turn-metadata) in
+                      (sort turns #'> :key #'first))
+                 (game-loop turn-score turn-world turn-objects turn-path turn-metadata))))))
 
-(defun game-loop (world objects path metadata)
+(defun update-hiscore (current-score path metadata)
+  (let ((best (assoc :best metadata)))
+    (when (and best (> current-score (second best)))
+      (setf (second best) current-score
+            (third best) path))
+    (when *force-shutdown-p*
+      (let ((best-path (third path)))
+        (setf (third best) (lambda () (cons :A (funcall best-path)))))))
+  current-score)
 
-  ;; (declare (optimize (debug 3)))
-  ;; (dump-world world objects path metadata)
-  ;; (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a~%"
-  ;;         (choose-target world objects path metadata)
-  ;;         (score world objects path metadata)
-  ;;         (funcall objects :underwater)
-  ;;         (dump-path nil path))
+(defun game-loop (current-score world objects path metadata)
+
+  (declare (optimize (debug 3)))
+  (dump-world world objects path metadata)
+  (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a~%"
+          (choose-target world objects path metadata)
+          (score world objects path metadata)
+          (funcall objects :underwater)
+          (dump-path nil path))
   ;; (sleep 0.2)
-  ;; ;;(break)
+  (break)
+
+  (update-hiscore current-score path metadata)
+
+  ;; check for extremal condition
+  (when *force-shutdown-p*
+    (return-from game-loop))
   
-  (let ((current-score (update-hiscore world objects path metadata)))    
-    ;; check for extremal condition
-    (when (or (not current-score) *force-shutdown-p*)
-      (let ((path (lambda () (cons :A (funcall path)))))
-        (update-hiscore world objects path metadata)
-        (return-from game-loop
-          (values world objects path metadata))))
-    ;; run robot ai and perform the game turn
-    (iter (for robot-step-script in (robot-ai world objects path metadata))
-          (unless robot-step-script
-            (return-from game-loop
-              (values world objects path metadata)))
-          (for world-script = (make-script (append robot-step-script
-                                                   (list #'rocks-move
-                                                         #'water-update
-                                                         #'game-loop))))
-          (funcall world-script world objects path metadata)))
-  (values world objects path metadata))
+  ;; run robot ai and perform the game turn
+  (robot-ai world objects path metadata))  
 
 (defun solve-world (world objects path metadata)
-  (game-loop world objects path metadata)
+  (game-loop 0 world objects path metadata)
   (let ((best-solve (third (assoc :best metadata))))
     (dump-path t best-solve)))
 

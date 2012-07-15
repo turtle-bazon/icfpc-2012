@@ -21,4 +21,4 @@
         (when (funcall objects :collected-lifts)
 	  (incf score (* (length collected-lambdas) 50)))
 	score))))
-      
+
