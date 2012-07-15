@@ -54,29 +54,40 @@
             (funcall action world objects path metadata))
           (finally (return (values world objects path metadata))))))
 
+(defun make-game-turn (move)
+  (let ((go-script 
+         (ecase move
+           (:L #'robot-go-left-script)
+           (:R #'robot-go-right-script)
+           (:D #'robot-go-down-script)
+           (:U #'robot-go-up-script)
+           (:W #'robot-go-wait-script)
+           (:S #'robot-go-razor-script))))
+    (lambda (world objects path metadata)
+      (let ((robot-actions (funcall go-script world objects path metadata)))
+        (when robot-actions
+          (let ((game-turn-script (make-script (append robot-actions
+                                                       (list #'rocks-move
+                                                             #'beards-growth
+                                                             #'water-update)))))
+            (funcall game-turn-script world objects path metadata)))))))
+
 (defun robot-ai (world objects path metadata)
+  ;; (declare (optimize (debug 3)))
   (let ((current-target (choose-target world objects path metadata)))
     (unless current-target
       (return-from robot-ai nil))
-    (iter (for script-builder in (list #'robot-go-left-script
-                                       #'robot-go-right-script
-                                       #'robot-go-up-script
-                                       #'robot-go-down-script
-                                       #'robot-go-wait-script
-                                       ;;#'robot-go-razor-script
-                                       ))
-          (for robot-actions = (funcall script-builder world objects path metadata))
-          (when robot-actions
-            (for game-turn-script = (make-script (append robot-actions
-                                                         (list #'rocks-move
-                                                               #'water-update))))
-            (for (values turn-world turn-objects turn-path turn-metadata) =
-                 (funcall game-turn-script world objects path metadata))
+    (iter (for available-move in '(:L :R :D :U :W))
+          (for turn-proc = (make-game-turn available-move))
+          (for (values turn-world turn-objects turn-path turn-metadata) =
+                 (funcall turn-proc world objects path metadata))
+          (when (and turn-world turn-objects turn-path turn-metadata)
             (for turn-score = (score turn-world turn-objects turn-path turn-metadata))
             (when turn-score
               (for turn-weight = (estimate-position-weight current-target turn-score turn-world turn-objects turn-path turn-metadata))
               (collect (list turn-weight turn-score turn-world turn-objects turn-path turn-metadata) into turns)))
           (finally
+           (break)
            (iter (for (turn-weight turn-score turn-world turn-objects turn-path turn-metadata) in
                       (sort turns #'> :key #'first))
                  (game-loop turn-score turn-world turn-objects turn-path turn-metadata))))))
@@ -93,15 +104,15 @@
 
 (defun game-loop (current-score world objects path metadata)
 
-  (declare (optimize (debug 3)))
-  (dump-world world objects path metadata)
-  (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a~%"
-          (choose-target world objects path metadata)
-          (score world objects path metadata)
-          (funcall objects :underwater)
-          (dump-path nil path))
-  ;; (sleep 0.2)
-  (break)
+  ;; (declare (optimize (debug 3)))
+  ;; (dump-world world objects path metadata)
+  ;; (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a~%"
+  ;;         (choose-target world objects path metadata)
+  ;;         (score world objects path metadata)
+  ;;         (funcall objects :underwater)
+  ;;         (dump-path nil path))
+  ;; ;; (sleep 0.2)
+  ;; (break)
 
   (update-hiscore current-score path metadata)
 
