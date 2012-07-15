@@ -159,6 +159,7 @@
 			 (:target-9 #\9)
 			 (:beard #\W)
 			 (:razor #\!)
+			 (:horock #\@)
 			 (t #\Space))))
       (format t "~%")))
   (values world objects path metadata))
