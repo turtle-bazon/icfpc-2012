@@ -15,10 +15,11 @@
 		    nil)
 		   ((and (= x ,rx-new)
 			 (= y ,ry-new))
-		    ,rock-type
-		    (if (and ,fall (eq ,rock-type :horock))
-			:lambda
-			,rock-type))
+		    ,(if fall
+			 `(if (and (eq ,rock-type :horock) ,object-under)
+			      :lambda
+			      ,rock-type)
+			 rock-type))
 		   (t (funcall ,world x y))))
 	   (lambda (type)
 	     (cond ((eq type ,rock-type) (cons (complex ,rx-new ,ry-new)
