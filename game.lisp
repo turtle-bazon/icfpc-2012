@@ -74,7 +74,8 @@
               (funcall game-turn-script world objects path metadata))))))))
 
 (defun make-player (world objects path metadata)
-  (lambda (replay-path turn-callback)
+  (lambda (replay-path initializer turn-callback)
+    (funcall initializer world objects path metadata)
     (multiple-value-bind (turn-world turn-objects turn-path turn-metadata)
         (values world objects path metadata)
       (iter (for move in (reverse (funcall replay-path)))
@@ -225,18 +226,18 @@
 
 (defun debug-script (file path)
   (with-open-file (s file)
-    (multiple-value-call
-	(make-script (cons #'dump-rocks
-			   (cons #'dump-robot
-				 (cons #'dump-world
-				       (iter (for reaction in-sequence path)
-					 (collect (make-game-turn (form-keyword reaction)))
-					 (collect #'dump-rocks)
-					 (collect #'dump-robot)
-					 (collect #'dump-injury)
-					 (collect #'dump-world)
-					 (collect #'break-script))))))
-      (make-mine s))))
+    (funcall (multiple-value-call #'make-player (make-mine s))
+	     (lambda ()
+	       (reverse (iter (for reaction in-sequence path)
+			  (collect (form-keyword reaction)))))
+	     (lambda (world objects path metadata)
+	       (dump-robot world objects path metadata)
+	       (dump-world world objects path metadata)
+	       (break))
+	     (lambda (world objects path metadata)
+	       (dump-robot world objects path metadata)
+	       (dump-world world objects path metadata)
+	       (break)))))
 
 (defun debug-LLLLDDRRRD-script (file)
   (with-open-file (f file)
