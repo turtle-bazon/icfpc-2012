@@ -70,9 +70,13 @@
                 (cond ((and will-free-rock-b (not will-free-rock-a)) t)
                       ((and will-free-rock-a (not will-free-rock-b)) nil)
                       ((and has-flooding-p
-                            (> portal-dist-a portal-dist-b)) t)
+                            (or (< tay tby)
+                                (and (= tay tby)
+                                     (> portal-dist-a portal-dist-b)))) t)
                       ((and has-flooding-p
-                            (> portal-dist-b portal-dist-a)) nil)
+                            (or (> tay tby)
+                                (and (= tay tby)
+                                     (> portal-dist-b portal-dist-a)))) nil)
                       (t (< robot-dist-a robot-dist-b)))))))))))
 
 (defun find-most-important-object (type world objects path metadata)
