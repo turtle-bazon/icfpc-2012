@@ -67,9 +67,9 @@
              (:rock ,(when (and push-check push-script)
                            `(when (,push-check world metadata rx~ ry~)
                               (list (,push-script rx~ ry~) (function ,mover)))))
-             (:lambda (list (function ,mover) (collect-lambda/open-lift rx~ ry~) (function path-set-cleared)))
+             (:lambda (list (function ,mover) (collect-lambda/open-lift rx~ ry~)))
 	     (:razor (list (function ,mover) (collect-razor rx~ ry~)))
-             (:open-lambda-lift (list (function ,mover) (collect-lift rx~ ry~) (function path-set-cleared)))
+             (:open-lambda-lift (list (function ,mover) (collect-lift rx~ ry~)))
              ((:robot :earth nil) (list (function ,mover)))))))))
 
 

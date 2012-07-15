@@ -11,7 +11,6 @@
 (defun make-game-turn (move)
   (let ((go-script 
          (ecase move
-           (:cleared nil)
            (:L #'robot-go-left-script)
            (:R #'robot-go-right-script)
            (:D #'robot-go-down-script)
@@ -22,20 +21,34 @@
       (when go-script
         (let ((robot-actions (funcall go-script world objects path metadata)))
           (when robot-actions
-            (let ((game-turn-script (make-script (append robot-actions
-                                                         (list (lambda (world objects path metadata)
-								 (multiple-value-bind (world~ objects~ path~ metadata~)
-								     (rocks-move world objects path metadata)
-								   (funcall (beards-growth world objects) world~ objects~ path~ metadata~)))
-                                                               #'water-update)))))
-              (funcall game-turn-script world objects path metadata))))))))
+            (flet ((objects-collected (objects)
+                     (+ (length (funcall objects :collected-lambda))
+                        (length (funcall objects :collected-lifts)))))
+              (let ((game-turn-script (make-script (append robot-actions
+                                                           (list (lambda (world objects path metadata)
+                                                                   (multiple-value-bind (world~ objects~ path~ metadata~)
+                                                                       (rocks-move world objects path metadata)
+                                                                     (funcall (beards-growth world objects) world~ objects~ path~ metadata~)))
+                                                                 #'water-update))))
+                    (before-objects-collected (objects-collected objects)))
+                (multiple-value-bind (world objects path metadata)
+                    (funcall game-turn-script world objects path metadata)
+                  (if (> (objects-collected objects) before-objects-collected)
+                      (path-set-cleared world objects path metadata)
+                      (values world objects path metadata)))))))))))
 
 (defun make-player (world objects path metadata)
   (lambda (replay-path turn-callback)
     (funcall turn-callback world objects path metadata)
     (multiple-value-bind (turn-world turn-objects turn-path turn-metadata)
         (values world objects path metadata)
-      (iter (for move in (reverse (funcall replay-path)))
+      (iter (with existing-moves = (reverse (funcall path)))
+            (for move in (reverse (funcall replay-path)))
+            (for existing-move = (car existing-moves))
+            (setf existing-moves (cdr existing-moves))
+            (when (eq move existing-move) ;; skip already done moves
+              (next-iteration))
+            (assert (not existing-moves))
 	    (when (eq move :A)
 	       (return (values turn-world turn-objects turn-path turn-metadata)))
             (for turn-proc = (make-game-turn move))
@@ -62,10 +75,11 @@
                  (return-from visited-p t)))))
   nil)
 
-(defun robot-ai (world objects path metadata player)
+(defun robot-ai (world objects path metadata)
 ;;  (declare (optimize (debug 3)))
   
-  (let ((current-target (choose-target world objects path metadata)))
+  (let ((current-target (choose-target world objects path metadata))
+        (player (apply #'make-player (funcall objects :route-start))))
     (unless current-target
       (return-from robot-ai nil))
     (iter (for available-move in '(:L :R :D :U :W))
@@ -83,7 +97,7 @@
           (finally
            (let ((ordered-turns (sort turns (make-positions-comparator current-target))))             
              (iter (for (move turn-score turn-world turn-objects turn-path turn-metadata) in ordered-turns)
-                   (game-loop turn-score player turn-world turn-objects turn-path turn-metadata)))))))
+                   (game-loop turn-score turn-world turn-objects turn-path turn-metadata)))))))
 
 (defun update-hiscore (current-score path metadata)
   (let ((best (assoc :best metadata)))
@@ -103,7 +117,7 @@
                   (third best) current-best-path)))))
   current-score)
 
-(defun game-loop (current-score player world objects path metadata)
+(defun game-loop (current-score world objects path metadata)
 
   ;; (declare (optimize (debug 3)))
   ;; (dump-world world objects path metadata)
@@ -112,8 +126,8 @@
   ;;         (score world objects path metadata)
   ;;         (funcall objects :underwater)
   ;;         (dump-path nil path))
-  ;; (sleep 0.1)
-  ;; ;;(break)
+  ;; ;;(sleep 0.1)
+  ;; (break)
 
   (update-hiscore current-score path metadata)
 
@@ -122,13 +136,19 @@
     (return-from game-loop))
   
   ;; run robot ai and perform the game turn
-  (robot-ai world objects path metadata player))
+  (robot-ai world objects path metadata))
 
 (defun solve-world (world objects path metadata)
-  (let ((player (make-player world objects path metadata)))
-    (game-loop 0 player world objects path metadata)
-    (let ((best-solve (third (assoc :best metadata))))
-      (dump-path t best-solve))))
+  (game-loop 0
+             world
+             (lambda (type)
+               (if (eq type :route-start)
+                   (list world objects path metadata)
+                   (funcall objects type)))
+             path
+             metadata)
+  (let ((best-solve (third (assoc :best metadata))))
+    (dump-path t best-solve)))
 
 ;; Debugging stuff
 
