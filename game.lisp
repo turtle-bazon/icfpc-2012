@@ -154,6 +154,8 @@
 			 (:target-7 #\7)
 			 (:target-8 #\8)
 			 (:target-9 #\9)
+			 (:beard #\W)
+			 (:razor #\!)
 			 (t #\Space))))
       (format t "~%")))
   (values world objects path metadata))

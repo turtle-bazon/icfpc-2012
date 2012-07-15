@@ -1,6 +1,21 @@
 
 (in-package :lambda-lifter)
 
+(defparameter *map-configurations*
+  '((:FLOOD . ((:WATER . 0) (:FLOODING . 0) (:WATERPROOF . 10)))
+    (:TRAMPOLINE . (:TRAMPOLINE))
+    (:BEARD . ((:GROWTH . 25) (:RAZORS . 0)))))
+
+(defun only-keywords (type-configuration)
+  (mapcar (lambda (param)
+	    (if (listp param)
+		(car param)
+		param))
+	  type-configuration))
+
+(defun map-allowed-keywords (type)
+  (only-keywords (cdr (assoc type *map-configurations*))))
+
 (defmacro with-meta-bind ((metadata &rest vars) &body body)
   `(let (,@(iter (for var in vars)
                  (collect `(,var (second (assoc ,(form-keyword var) ,metadata))))))
@@ -35,19 +50,29 @@
            metadata))))))
 
 (defun apply-map-parser (stream cell-receiver)
-  (multiple-value-bind (map width height)
+  (multiple-value-bind (map type width height)
       (iter
 	(with state = :reading-map)
+	(with map-type = :GENERAL)
 	(with map-width = 0)
 	(with map-height = 0)
 	(for line in-stream stream using #'read-line)
 	(when (zerop (length line))
-	  (setf state nil))
-	(when (eq state :reading-map)
-	  (setf map-width (max map-width (length line)))
-	  (incf map-height))
+	  (setf state :reading-metadata)
+	  (collect line into lines)
+	  (next-iteration))
+	(ecase state
+	  (:reading-map
+	   (setf map-width (max map-width (length line)))
+	   (incf map-height))
+	  (:reading-metadata
+	   (let* ((metakeyword (form-keyword (string-upcase (first (split-sequence:split-sequence #\Space line)))))
+		  (maptypeforkeyword (car (find-if (lambda (params) (member metakeyword (only-keywords params))) *map-configurations*))))
+	     (assert maptypeforkeyword nil "Unknown meta keyword: ~a" metakeyword)
+	     (assert (or (eq map-type :GENERAL) (eq map-type maptypeforkeyword)) nil "Illegal map type change from ~a to ~a" map-type maptypeforkeyword)
+	     (setf map-type maptypeforkeyword))))
 	(collect line into lines)
-	(finally (return (values lines map-width map-height))))
+	(finally (return (values lines map-type map-width map-height))))
     (iter outer
       (with state = :reading-map)
       (for line in map)
@@ -87,21 +112,30 @@
 			(#\6 :target-6)
 			(#\7 :target-7)
 			(#\8 :target-8)
-			(#\9 :target-9))
+			(#\9 :target-9)
+			(#\W :beard)
+			(#\! :razor))
 		      width
 		      cell-index
 		      rev-row-index))))
 	(:reading-metadata
 	 (for metasplit = (split-sequence:split-sequence #\Space line))
 	 (let ((pname (form-keyword (string-upcase (first metasplit)))))
-	   (collect (ecase pname
-		      ((:WATER :FLOODING :WATERPROOF) (list pname (parse-integer (second metasplit))))
+	   (collect (case type
 		      (:TRAMPOLINE (list (form-keyword (format nil "PORTAL-~a" (string-upcase (second metasplit))))
-					 (form-keyword (format nil "TARGET-~a" (fourth metasplit))))))
+					 (form-keyword (format nil "TARGET-~a" (fourth metasplit)))))
+		      (t (list pname (parse-integer (second metasplit)))))
 	     into metadata))))
       (finally
-       (return-from outer (append (list (list :best 0 nil)
+       (return-from outer (append (list (list :type type)
+					(list :best 0 nil)
 					(list :width width)
 					(list :height height))
-				  metadata))))))
+				  metadata
+				  (unless (eq type :TRAMPOLINE)
+				  (iter (for maptypeparam in (map-allowed-keywords type))
+				    (unless (assoc maptypeparam metadata)
+				      (collect (list maptypeparam
+						     (cdr (assoc maptypeparam
+								 (cdr (assoc type *map-configurations*)))))))))))))))
 
