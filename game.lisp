@@ -60,7 +60,7 @@
   nil)
 
 (defun robot-ai (world objects path metadata player)
-  ;; (declare (optimize (debug 3)))
+;;  (declare (optimize (debug 3)))
   
   (let ((current-target (choose-target world objects path metadata)))
     (unless current-target
@@ -71,13 +71,14 @@
               (funcall turn-proc world objects path metadata)
             (when (and turn-world turn-objects turn-path turn-metadata)
               (with-robot-coords (rx ry) turn-objects
-                (unless (visited-p available-move rx ry path player)
+                (for already-visited-p = (visited-p available-move rx ry path player))
+                (unless already-visited-p
                   (let ((turn-score (score turn-world turn-objects turn-path turn-metadata))
                         (move available-move))
                     (when turn-score
                       (collect (list move turn-score turn-world turn-objects turn-path turn-metadata) into turns)))))))
           (finally
-           (let ((ordered-turns (sort turns (make-positions-comparator current-target))))
+           (let ((ordered-turns (sort turns (make-positions-comparator current-target))))             
              (iter (for (move turn-score turn-world turn-objects turn-path turn-metadata) in ordered-turns)
                    (game-loop turn-score player turn-world turn-objects turn-path turn-metadata)))))))
 
@@ -90,7 +91,7 @@
       (let ((best-path (or (third best) (lambda () nil)))
             (best-score (or (second best) 0)))
         (setf (second best) best-score
-              (third best) (lambda () (cons :A (funcall best-path)))))))
+              (third best) (if (eq (car (funcall best-path)) :A) path (lambda () (cons :A (funcall best-path))))))))
   current-score)
 
 (defun game-loop (current-score player world objects path metadata)
@@ -102,7 +103,7 @@
   ;;         (score world objects path metadata)
   ;;         (funcall objects :underwater)
   ;;         (dump-path nil path))
-  ;; ;; (sleep 0.2)
+  ;; ;;(sleep 0.2)
   ;; (break)
 
   (update-hiscore current-score path metadata)
