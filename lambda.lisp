@@ -11,9 +11,9 @@
                (lambda (type)
                  (case type
                    ,@(when collect-into `((,collect-into
-					   (ecase ,collect-method
-					     (:collect (cons (complex lx ly) (funcall objects type)))
-					     (:count (+ 1 (funcall objects type)))))))
+					   ,(ecase collect-method
+                                                   (:collect `(cons (complex lx ly) (funcall objects type)))
+                                                   (:count `(+ 1 (funcall objects type)))))))
                    (,type (remove (complex lx ly) (funcall objects type)))
                    (t (funcall objects type))))
                path
