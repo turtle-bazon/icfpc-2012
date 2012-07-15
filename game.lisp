@@ -167,7 +167,7 @@
 (defun dump-robot (world objects path metadata)
   (format t ";; robot: ~{~a ~}, injury: ~a, underwater: ~a, score: ~a, razors: ~a~%"
 	  (funcall objects :robot) (funcall objects :injury) (funcall objects :underwater)
-	  (score world objects path metadata) (funcall objects :razor)) 
+	  (score world objects path metadata) (funcall objects :razors))
   (values world objects path metadata))
 
 (defun dump-rocks (world objects path metadata)
@@ -193,11 +193,11 @@
 				 (cons #'dump-world
 				       (iter (for raction in-sequence path)
 					 (ecase raction
-					   (#\L (collect #'robot-move-left))
-					   (#\R (collect #'robot-move-right))
-					   (#\U (collect #'robot-move-up))
-					   (#\D (collect #'robot-move-down))
-					   (#\W (collect #'robot-wait))
+					   (#\L (collect #'robot-go-left-script))
+					   (#\R (collect #'robot-go-right-script))
+					   (#\U (collect #'robot-go-up-script))
+					   (#\D (collect #'robot-go-down-script))
+					   (#\W (collect #'robot-go-wait-script))
 					   (#\A ))
 					 (collect #'rocks-move)
 					 (collect #'beards-growth)
