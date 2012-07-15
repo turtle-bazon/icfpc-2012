@@ -125,8 +125,10 @@
       (setf (second best) current-score
             (third best) path))
     (when *force-shutdown-p*
-      (let ((best-path (third path)))
-        (setf (third best) (lambda () (cons :A (funcall best-path)))))))
+      (let ((best-path (or (third best) (lambda () nil)))
+            (best-score (or (second best) 0)))
+        (setf (second best) best-score
+              (third best) (lambda () (cons :A (funcall best-path)))))))
   current-score)
 
 (defun game-loop (current-score player world objects path metadata)

@@ -9,7 +9,7 @@
   (when path
     (iter (with seq = '())
           (for step in (funcall path))
-          (when (member step '(:L :R :U :D :W :S))
+          (when (member step '(:A :L :R :U :D :W :S))
             (push step seq))
           (finally        
            (return (format stream "~{~a~}" seq))))))
