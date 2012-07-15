@@ -3,7 +3,7 @@
 
 (defun path-length (path)
   (iter (for step in (funcall path))
-        (counting (member step '(:L :R :U :D :W)))))
+        (counting (member step '(:L :R :U :D :W :S)))))
 
 (defun visited-p (sample-dx sample-dy path)
   (iter (with dx = 0)
@@ -14,7 +14,7 @@
           (:R (decf dx))
           (:U (decf dy))
           (:D (incf dy))
-          (:W nil)
+          ((:W :S) nil)
           (:cleared (return-from visited-p nil)))
         (when (and (= dx sample-dx) (= dy sample-dy))
           (return-from visited-p t))))
@@ -23,7 +23,7 @@
   (when path
     (iter (with seq = '())
           (for step in (funcall path))
-          (when (member step '(:L :R :U :D :W))
+          (when (member step '(:L :R :U :D :W :S))
             (push step seq))
           (finally        
            (return (format stream "~{~a~}" seq))))))
