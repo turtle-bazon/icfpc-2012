@@ -156,6 +156,7 @@
   (declare (ignorable world objects path metadata))
   (with-meta-bind (metadata width height water flooding)
     (format t ";; growth: ~a~%" (funcall objects :growth))
+    (format t ";; path: ~a~%" (funcall path))
     (iter
       (with water-level = (+ (if water water 0) (if (and flooding (/= flooding 0)) (floor (path-length path) flooding) 0)))
       (for y from height downto 1)
