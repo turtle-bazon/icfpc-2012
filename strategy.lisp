@@ -32,36 +32,51 @@
 
 (defun will-free-a-rock (ox oy world objects path metadata)
   (let ((object-type (funcall world ox oy)))
-    (multiple-value-bind (world objects path metadata)
-        (rocks-move (lambda (x y)
-                      (if (and (= x ox) (= y oy))
-                          nil
-                          (funcall world x y)))
-                    (lambda (type)
-                      (if (eq type object-type)
-                          (remove (complex ox oy) (funcall objects type))
-                          (funcall objects type)))
-                    path
-                    metadata)
-      (declare (ignore objects path metadata))
-      (eq (funcall world ox oy) :rock))))
+    (with-robot-coords (rx ry) objects
+      (multiple-value-bind (world objects path metadata)
+          (funcall (make-game-turn :W)
+                   (lambda (x y)
+                     (cond ((and (= x ox) (= y oy)) nil)
+                           ((and (= x rx) (= y ry)) nil)
+                           (t (funcall world x y))))
+                   (lambda (type)
+                     (cond ((eq type object-type) (remove (complex ox oy) (funcall objects type)))
+                           (t (funcall objects type))))
+                   path
+                   metadata)
+        (declare (ignore objects path metadata))
+        (eq (funcall world ox oy) :rock)))))
+
+(defun make-targets-importancy-comparator (world objects path metadata)
+  (with-robot-coords (rx ry) objects
+    (let ((portal-coords (first (append (funcall objects :closed-lambda-lift)
+                                        (funcall objects :open-lambda-lift))))
+          (has-flooding-p (map-has-flooding-p world objects metadata)))
+      (with-coords (px py) portal-coords
+        (lambda (target-a target-b)
+          (with-coords (tax tay) target-a
+            (with-coords (tbx tby) target-b
+              (let ((will-free-rock-a (will-free-a-rock tax tay world objects path metadata))
+                    (will-free-rock-b (will-free-a-rock tbx tby world objects path metadata))
+                    (robot-dist-a (object-sq-dist rx ry tax tay))
+                    (robot-dist-b (object-sq-dist rx ry tbx tby))
+                    (portal-dist-a (object-sq-dist px py tax tay))
+                    (portal-dist-b (object-sq-dist px py tbx tby)))
+                (cond ((and will-free-rock-b (not will-free-rock-a)) t)
+                      ((and will-free-rock-a (not will-free-rock-b)) nil)
+                      ((and has-flooding-p
+                            (> portal-dist-a portal-dist-b)) t)
+                      ((and has-flooding-p
+                            (> portal-dist-b portal-dist-a)) nil)
+                      (t (< robot-dist-a robot-dist-b)))))))))))
 
 (defun find-most-important-object (type world objects path metadata)
-  (with-robot-coords (rx ry) objects
-    (iter (for coords in (funcall objects type))
-          (with-coords (ox oy) coords
-            (when (target-accessible-p ox oy world metadata)
-              (collect (list coords
-                             (object-sq-dist rx ry ox oy)
-                             (will-free-a-rock ox oy world objects path metadata))
-                into targets-facts)))
-          (finally
-           (return 
-             (caar (sort targets-facts
-                         (lambda (facts-a facts-b)
-                           (cond ((and (third facts-b) (not (third facts-a))) t)
-                                 ((and (third facts-a) (not (third facts-b))) nil)
-                                 (t (< (second facts-a) (second facts-b))))))))))))
+  (iter (for coords in (funcall objects type))
+        (with-coords (ox oy) coords
+          (when (target-accessible-p ox oy world metadata)
+            (collect coords into targets-facts)))
+        (finally
+         (return (car (sort targets-facts (make-targets-importancy-comparator world objects path metadata)))))))
 
 (defun choose-target (world objects path metadata)
   (iter (for possible-targets in '(:lambda :open-lambda-lift :portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i :razor))

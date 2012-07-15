@@ -90,24 +90,30 @@
     (when (and best (> current-score (second best)))
       (setf (second best) current-score
             (third best) path))
-    (when *force-shutdown-p*
-      (let ((best-path (or (third best) (lambda () nil)))
-            (best-score (or (second best) 0)))
-        (setf (second best) best-score
-              (third best) (if (eq (car (funcall best-path)) :A) best-path (lambda () (cons :A (funcall best-path))))))))
+    (when (or *force-shutdown-p* *force-dump-results-p*)
+      (let* ((best-path (or (third best) (lambda () nil)))
+             (best-score (or (second best) 0))
+             (current-best-path (if (eq (car (funcall best-path)) :A) best-path (lambda () (cons :A (funcall best-path)))))
+             (current-best-score best-score))
+        (if *force-dump-results-p*
+            (progn
+              (setf *force-dump-results-p* nil)
+              (dump-path t current-best-path))
+            (setf (second best) current-best-score
+                  (third best) current-best-path)))))
   current-score)
 
 (defun game-loop (current-score player world objects path metadata)
 
   ;; (declare (optimize (debug 3)))
   ;; (dump-world world objects path metadata)
-  ;; (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a~%"
+  ;; (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a"
   ;;         (choose-target world objects path metadata)
   ;;         (score world objects path metadata)
   ;;         (funcall objects :underwater)
   ;;         (dump-path nil path))
-  ;; ;;(sleep 0.2)
-  ;; (break)
+  ;; (sleep 0.1)
+  ;; ;;(break)
 
   (update-hiscore current-score path metadata)
 
