@@ -6,7 +6,6 @@
   (let ((collected-lambdas (funcall objects :collected-lambda))
 	(underwater (funcall objects :underwater))
 	(injury (funcall objects :injury))
-        (path-script (funcall path))
         (score 0))
     (with-meta-bind (metadata waterproof)
       (unless (or (and underwater waterproof (> underwater waterproof)) injury)
