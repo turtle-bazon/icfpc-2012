@@ -13,11 +13,8 @@
 	(decf score (path-length path))
 	;; 25 points gained for every Lambda collected 
 	(incf score (* (length collected-lambdas) 25))
-	;; 25 extra points per Lambda collected on executing Abort (this is default for us)
-	;; (when (eq (car path-script) :A)
-        (incf score (* (length collected-lambdas) 25))
-	;; 50 extra points per Lambda collected on reaching the winning state
-        (when (funcall objects :collected-lifts)
-	  (incf score (* (length collected-lambdas) 50)))
+        (if (funcall objects :collected-lifts)
+            (incf score (* (length collected-lambdas) 50)) ;; 50 extra points per Lambda collected on reaching the winning state
+            (incf score (* (length collected-lambdas) 25))) ;; 25 extra points per Lambda collected on executing Abort (this is default for us)
 	score))))
 
