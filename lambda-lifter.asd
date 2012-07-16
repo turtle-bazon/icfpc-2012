@@ -22,7 +22,8 @@
                (:file "robot" :depends-on ("lambda" "rock" "portals"))
 	       (:file "water" :depends-on ("robot"))
 	       (:file "beard" :depends-on ("path"))
-               (:file "strategy" :depends-on ("rock" "water"))
+               (:file "a-star" :depends-on ("package"))
+               (:file "strategy" :depends-on ("rock" "water" "a-star"))
                (:file "game" :depends-on ("robot" "score" "water" "beard" "strategy"))
                (:file "main" :depends-on ("game"))))
 
