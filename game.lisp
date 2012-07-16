@@ -76,6 +76,16 @@
                  (return-from visited-p t)))))
   nil)
 
+
+(defun useless-action-p (move world objects path metadata turn-world turn-objects turn-path turn-metadata player)
+  (declare (ignore world metadata turn-world turn-path turn-metadata))
+  (with-robot-coords (rx ry) turn-objects
+    (ecase move
+      (:W (or (equal (funcall objects :rock) (funcall turn-objects :rock))
+              (visited-p move rx ry path player)))
+      ((:L :R :U :D) (visited-p move rx ry path player))
+      (:S t))))
+
 (defun robot-ai (world objects path metadata)
 ;;  (declare (optimize (debug 3)))
   
@@ -87,14 +97,12 @@
           (for turn-proc = (make-game-turn available-move))
           (multiple-value-bind (turn-world turn-objects turn-path turn-metadata)
               (funcall turn-proc world objects path metadata)
-            (when (and turn-world turn-objects turn-path turn-metadata)
-              (with-robot-coords (rx ry) turn-objects
-                (for already-visited-p = (visited-p available-move rx ry path player))
-                (unless already-visited-p
-                  (let ((turn-score (score turn-world turn-objects turn-path turn-metadata))
-                        (move available-move))
-                    (when turn-score
-                      (collect (list move turn-score turn-world turn-objects turn-path turn-metadata) into turns)))))))
+            (when (and turn-world turn-objects turn-path turn-metadata
+                       (not (useless-action-p available-move world objects path metadata turn-world turn-objects turn-path turn-metadata player)))
+              (let ((turn-score (score turn-world turn-objects turn-path turn-metadata))
+                    (move available-move))
+                (when turn-score
+                  (collect (list move turn-score turn-world turn-objects turn-path turn-metadata) into turns)))))
           (finally
            (let ((ordered-turns (sort turns (make-positions-comparator current-target))))             
              (iter (for (move turn-score turn-world turn-objects turn-path turn-metadata) in ordered-turns)
@@ -122,17 +130,17 @@
   current-score)
 
 (defun game-loop (current-score world objects path metadata)
+  (declare (optimize (debug 3)))
 
-  #+nil(progn
-    (declare (optimize (debug 3)))
-    (dump-world world objects path metadata)
-    (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a"
-	    (choose-target world objects path metadata)
-	    (score world objects path metadata)
-	    (funcall objects :underwater)
-	    (dump-path nil path))
-    ;; ;;(sleep 0.1)
-    (break))
+  ;; (progn
+  ;;   (dump-world world objects path metadata)
+  ;;   (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a"
+  ;;           (choose-target world objects path metadata)
+  ;;           (score world objects path metadata)
+  ;;           (funcall objects :underwater)
+  ;;           (dump-path nil path))
+  ;;   ;; ;;(sleep 0.1)
+  ;;   (break))
 
   (update-hiscore current-score objects path metadata)
 
@@ -160,8 +168,8 @@
 (defun dump-world (world objects path metadata)
   (declare (ignorable world objects path metadata))
   (with-meta-bind (metadata width height water flooding)
-    (format t ";; growth: ~a~%" (funcall objects :growth))
-    (format t ";; path: ~a~%" (funcall path))
+    ;; (format t ";; growth: ~a~%" (funcall objects :growth))
+    ;; (format t ";; path: ~a~%" (funcall path))
     (iter
       (with water-level = (+ (if water water 0) (if (and flooding (/= flooding 0)) (floor (path-length path) flooding) 0)))
       (for y from height downto 1)
