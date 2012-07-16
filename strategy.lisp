@@ -78,8 +78,9 @@
 (defun find-most-important-object (type world objects path metadata)
   (iter (for coords in (funcall objects type))
         (with-coords (ox oy) coords
-          (when (target-accessible-p ox oy world metadata)
-            (collect coords into targets-facts)))
+          (unless (target-accessible-p ox oy world metadata)
+            (next-iteration)))
+        (collect coords into targets-facts)
         (finally
          (when targets-facts
            (return (car (sort targets-facts (make-targets-importancy-comparator world objects path metadata))))))))
