@@ -135,7 +135,7 @@
 
 (defun max-ineffective-moves (metadata)
   (with-meta-bind (metadata width height)
-    (truncate (sqrt (* width height)))))
+    (truncate (* width height) 4)))
     ;; (truncate (sqrt (+ (* width width) (* height height))))))
 
 (defun game-loop (current-score world objects path metadata tries)
@@ -157,8 +157,8 @@
   ;; check for extremal or winning condition
   (when (or *force-shutdown-p*
             (funcall objects :collected-lifts)
-            ;; (>= tries (max-ineffective-moves metadata)))
-            (>= tries *max-ineffective-tries*))
+            (>= tries (max-ineffective-moves metadata)))
+            ;; (>= tries *max-ineffective-tries*))
     ;; (break)
     (return-from game-loop))
   
