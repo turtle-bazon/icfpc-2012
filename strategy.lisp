@@ -55,26 +55,35 @@
                       ((and has-flooding-p (> portal-dist-b portal-dist-a)) nil)
                       (t (< robot-dist-a robot-dist-b)))))))))))
 
-(defun find-most-important-object (type world objects path metadata)
+(defun find-most-important-object (world objects path metadata)
   (with-robot-coords (rx ry) objects
-    (iter (for coords in (funcall objects type))
-          (for direct-access-p = (a*-search/accessible (realpart coords)
-                                                       (imagpart coords)
-                                                       rx
-                                                       ry
-                                                       (lambda (x y)
-                                                         (and (in-range-p metadata x y)
-                                                              (member (funcall world x y) '(:earth nil))))))
-          (collect (cons coords direct-access-p) into targets-facts)
+    (iter outer
+          (for type in '(:lambda :open-lambda-lift :portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i :razor))
+          (iter (for coords in (funcall objects type))
+                ;; (for direct-access-p = (a*-search/accessible (realpart coords)
+                ;;                                              (imagpart coords)
+                ;;                                              rx
+                ;;                                              ry
+                ;;                                              (lambda (x y)
+                ;;                                                (and (in-range-p metadata x y)
+                ;;                                                     (member (funcall world x y) '(:earth nil))))))
+                (in outer (collect coords into targets-facts)))
           (finally
-           (when targets-facts
-             (return (caar (sort targets-facts (make-targets-importancy-comparator world objects path metadata)))))))))
+           (let* ((directs-accesses (a*-search/accessible-group rx
+                                                                ry
+                                                                (mapcar (lambda (v) (list (realpart v) (imagpart v))) targets-facts)
+                                                                (lambda (x y)
+                                                                  (and (in-range-p metadata x y)
+                                                                       (member (funcall world x y) '(:earth nil))))))
+                  (targets-facts (mapcar #'cons targets-facts directs-accesses)))
+             (when targets-facts
+               (return-from find-most-important-object
+                 (caar (sort targets-facts (make-targets-importancy-comparator world objects path metadata))))))))))
 
 (defun choose-target (world objects path metadata)
-  (iter (for possible-targets in '(:lambda :open-lambda-lift :portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i :razor))
-        (for nearest-object = (find-most-important-object possible-targets world objects path metadata))
-        (when nearest-object
-          (return-from choose-target nearest-object))))
+  (let ((nearest-object (find-most-important-object world objects path metadata)))
+    (when nearest-object
+      (return-from choose-target nearest-object))))
 
 (defun make-estimator (target move score world objects path metadata)
   (with-coords (target-x target-y) target
