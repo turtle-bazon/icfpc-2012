@@ -1,7 +1,7 @@
 
 (in-package :lambda-lifter)
 
-(defun a*-search/accessible-group (start-x start-y targets accessible-p)
+(defun a*-search/accessible-group (start-x start-y targets world objects metadata accessible-p)
   (declare (optimize (speed 3))
            (type fixnum start-x start-y)
            (type list targets)
@@ -32,11 +32,18 @@
                   (remhash best-point open-list))
             (iter
               (for neighbour in (remove-duplicates
-                                 (iter outer
-                                       (for (dx dy) in '((-1 0) (1 0) (0 1) (0 -1)))
-                                       (iter (for best-point in best-points)
-                                             (in outer (collect (complex (+ (realpart best-point) dx)
-                                                                         (+ (imagpart best-point) dy))))))))
+				 (let ((std-neighbours (iter outer
+							 (for (dx dy) in '((-1 0) (1 0) (0 1) (0 -1)))
+							 (iter (for best-point in best-points)
+							   (in outer (collect (complex (+ (realpart best-point) dx)
+										       (+ (imagpart best-point) dy)))))))
+				       (portal-neighbours (iter (for best-point in best-points)
+							   (for best-point-type = (funcall world (realpart best-point)
+											 (imagpart best-point)))
+							   (when (member best-point-type '(:portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i))
+							     (let ((portal-target (meta-value metadata best-point-type)))
+							       (collect (funcall objects portal-target)))))))
+				   (append std-neighbours portal-neighbours))))
               (for neighbour-x = (realpart neighbour))
               (for neighbour-y = (imagpart neighbour))
               (when (or (gethash neighbour closed-list)
