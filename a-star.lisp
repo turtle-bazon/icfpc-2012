@@ -61,7 +61,8 @@
 							     (+ (imagpart best-point) dy))))))))
 	  (for neighbour-x = (realpart neighbour))
 	  (for neighbour-y = (imagpart neighbour))
-	  (when (or (reduce
+	  (when (or (gethash neighbour closed-list)
+		    (reduce
 		     (lambda (x1 x2)
 		       (or x1 x2))
 		     (mapcar
@@ -70,8 +71,7 @@
 			    target
 			  (not (local-accessible-p neighbour-x neighbour-y
 						   target-x target-y))))
-		      targets))
-		    (gethash neighbour closed-list))
+		      targets)))
 	    (setf (gethash neighbour closed-list) t)
 	    (next-iteration))
 	  (unless (gethash neighbour open-list)
