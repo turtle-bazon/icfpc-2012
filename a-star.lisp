@@ -29,39 +29,55 @@
 	       (return-from a*-search/accessible t))
 	    (when (zerop (hash-table-count open-list))
 	       (return-from a*-search/accessible nil))))))
-		
+
 (defun a*-search/accessible-group (start-x start-y targets accessible-p)
   (let ((open-list (make-hash-table))
-        (closed-list (make-hash-table)))
+	(closed-list (make-hash-table)))
     (setf (gethash (complex start-x start-y) open-list) t)
     (flet ((sq-dist (point-a point-b)
-             (let ((x-diff (- (realpart point-a) (realpart point-b)))
-                   (y-diff (- (imagpart point-a) (imagpart point-b))))
-               (+ (* x-diff x-diff) (* y-diff y-diff))))
-           (local-accessible-p (x y target-x target-y)
-             (or (and (= x target-x) (= y target-y))
-                 (funcall accessible-p x y))))
-      (iter outer
-	(for (target-x target-y) in targets)
-	(for target-best-points = (make-hash-table))
-	(iter (for best-point = (iter (for (point v) in-hashtable open-list)
-				  (finding point minimizing (sq-dist point (complex target-x target-y)))))
-	  (if (gethash best-point target-best-points)
-	      (progn
-		(unless (gethash (complex target-x target-y) target-best-points)
-		  (in outer (collect nil)))
-		(leave))
-	      (progn
-		(setf (gethash best-point target-best-points) t)
-		(setf (gethash best-point closed-list) t)
-		(iter (for (dx dy) in '((-1 0) (1 0) (0 1) (0 -1)))
-		  (for neighbour-x = (+ (realpart best-point) dx))
-		  (for neighbour-y = (+ (imagpart best-point) dy))
-		  (for neighbour = (complex neighbour-x neighbour-y))
-		  (when (or (not (local-accessible-p neighbour-x neighbour-y target-x target-y))
-			    (gethash neighbour closed-list))
-		    (next-iteration))
-		  (unless (gethash neighbour open-list)
-		    (setf (gethash neighbour open-list) t)))
-		(when (gethash (complex target-x target-y) target-best-points)
-		  (in outer (collect t))))))))))
+	     (let ((x-diff (- (realpart point-a) (realpart point-b)))
+		   (y-diff (- (imagpart point-a) (imagpart point-b))))
+	       (+ (* x-diff x-diff) (* y-diff y-diff))))
+	   (local-accessible-p (x y target-x target-y)
+	     (or (and (= x target-x) (= y target-y))
+		 (funcall accessible-p x y))))
+      (iter main
+	(for best-points = (remove nil
+				   (remove-duplicates
+				    (iter (for (target-x target-y) in targets)
+				      (collect
+					  (iter (for (point v) in-hashtable open-list)
+					    (finding point minimizing (sq-dist point (complex target-x target-y)))))))))
+	(while best-points)
+	(iter (for best-point in best-points)
+	  (setf (gethash best-point closed-list) t)
+	  (remhash best-point open-list))
+	(iter
+	  (for neighbour in (remove-duplicates
+			     (iter outer
+			       (for (dx dy) in '((-1 0) (1 0) (0 1) (0 -1)))
+			       (iter (for best-point in best-points)
+				 (in outer (collect (complex (+ (realpart best-point) dx)
+							     (+ (imagpart best-point) dy))))))))
+	  (for neighbour-x = (realpart neighbour))
+	  (for neighbour-y = (imagpart neighbour))
+	  (when (or (reduce
+		     (lambda (x1 x2)
+		       (or x1 x2))
+		     (mapcar
+		      (lambda (target)
+			(destructuring-bind (target-x target-y)
+			    target
+			  (not (local-accessible-p neighbour-x neighbour-y
+						   target-x target-y))))
+		      targets))
+		    (gethash neighbour closed-list))
+	    (setf (gethash neighbour closed-list) t)
+	    (next-iteration))
+	  (unless (gethash neighbour open-list)
+	    (setf (gethash neighbour open-list) t)))))
+    (iter (for (target-x target-y) in targets)
+      (if (gethash (complex target-x target-y) closed-list)
+	  (collect t)
+	  (collect nil)))))
+
