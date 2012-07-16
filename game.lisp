@@ -86,11 +86,12 @@
       ((:L :R :U :D) (visited-p move rx ry path player))
       (:S t))))
 
-(defun robot-ai (world objects path metadata)
+(defun robot-ai (world objects path metadata tries)
 ;;  (declare (optimize (debug 3)))
   
   (let ((current-target (choose-target world objects path metadata))
-        (player (apply #'make-player (funcall objects :route-start))))
+        (player (apply #'make-player (funcall objects :route-start)))
+        (lambdas-eaten (length (funcall objects :collected-lambda))))
     (unless current-target
       (return-from robot-ai nil))
     (iter (for available-move in '(:L :R :D :U :W :S))
@@ -104,9 +105,12 @@
                 (when turn-score
                   (collect (list move turn-score turn-world turn-objects turn-path turn-metadata) into turns)))))
           (finally
-           (let ((ordered-turns (sort turns (make-positions-comparator current-target))))             
-             (iter (for (move turn-score turn-world turn-objects turn-path turn-metadata) in ordered-turns)
-                   (game-loop turn-score turn-world turn-objects turn-path turn-metadata)))))))
+           (let ((ordered-turns (sort turns (make-positions-comparator current-target))))
+             (iter (for counter from 1)
+                   (for (move turn-score turn-world turn-objects turn-path turn-metadata) in ordered-turns)
+                   (for turn-lambda-eaten = (length (funcall turn-objects :collected-lambda)))
+                   (for next-tries = (if (> turn-lambda-eaten lambdas-eaten) 0 (+ tries counter)))
+                   (game-loop turn-score turn-world turn-objects turn-path turn-metadata next-tries)))))))
 
 (defun update-hiscore (current-score objects path metadata)
   (flet ((maybe-abort-path (path)
@@ -121,7 +125,7 @@
            (current-best-score best-score))
       (when (> current-score best-score)
         (setf (second best) current-score
-              (third best) path)
+              (third best) (maybe-abort-path path))
         (when *force-dump-results-p*
           (format t ";; New best score: ~a as ~a" current-score (dump-path nil (maybe-abort-path path)))))
       (when *force-shutdown-p*
@@ -129,27 +133,37 @@
               (third best) current-best-path))))
   current-score)
 
-(defun game-loop (current-score world objects path metadata)
-  (declare (optimize (debug 3)))
+(defun max-ineffective-moves (metadata)
+  (with-meta-bind (metadata width height)
+    (truncate (* width height) 4)))
+    ;; (truncate (sqrt (+ (* width width) (* height height))))))
 
-  ;; (progn
-  ;;   (dump-world world objects path metadata)
-  ;;   (format t "Target: ~a; score: ~a; underwater: ~a; path: ~a"
-  ;;           (choose-target world objects path metadata)
-  ;;           (score world objects path metadata)
-  ;;           (funcall objects :underwater)
-  ;;           (dump-path nil path))
-  ;;   ;; ;;(sleep 0.1)
-  ;;   (break))
+(defun game-loop (current-score world objects path metadata tries)
+
+  ;; (declare (optimize (debug 3)))
+  ;; (dump-world world objects path metadata)
+  ;; (format t "Try: ~a/~a; target: ~a; score: ~a; underwater: ~a; path: ~a"
+  ;;         tries
+  ;;         (max-ineffective-moves metadata)
+  ;;         (choose-target world objects path metadata)
+  ;;         (score world objects path metadata)
+  ;;         (funcall objects :underwater)
+  ;;         (dump-path nil path))
+  ;; ;;(sleep 0.1)
+  ;; (break)
 
   (update-hiscore current-score objects path metadata)
 
   ;; check for extremal or winning condition
-  (when (or *force-shutdown-p* (funcall objects :collected-lifts))
+  (when (or *force-shutdown-p*
+            (funcall objects :collected-lifts)
+            (>= tries (max-ineffective-moves metadata)))
+            ;; (>= tries *max-ineffective-tries*))
+    ;; (break)
     (return-from game-loop))
   
   ;; run robot ai and perform the game turn
-  (robot-ai world objects path metadata))
+  (robot-ai world objects path metadata tries))
 
 (defun solve-world (world objects path metadata)
   (game-loop 0
@@ -159,7 +173,8 @@
                    (list world objects path metadata)
                    (funcall objects type)))
              path
-             metadata)
+             metadata
+             0)
   (let ((best-solve (third (assoc :best metadata))))
     (dump-path t best-solve)))
 

@@ -6,6 +6,8 @@
 
 (in-package :lambda-lifter)
 
+(defparameter *max-ineffective-tries* 12)
+
 (defvar *force-shutdown-p* nil)
 (defvar *force-dump-results-p* nil)
 

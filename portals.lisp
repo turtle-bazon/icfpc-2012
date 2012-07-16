@@ -16,9 +16,6 @@
 	   (affected-portals-coords (mapcar (lambda (aff-portal)
 					      (car (funcall objects aff-portal))) affected-portals)))
       (with-robot-coords (rx ry) objects
-	(print portal)
-	(print target)
-	(print target-coords)
 	(values (lambda (x y)
 		  (cond ((find-if (lambda (coord)
 				    (and (= x (realpart coord))

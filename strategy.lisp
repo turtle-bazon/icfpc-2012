@@ -35,33 +35,40 @@
           (has-flooding-p (map-has-flooding-p world objects metadata)))
       (with-coords (px py) portal-coords
         (lambda (target-a target-b)
-          (with-coords (tax tay) target-a
-            (with-coords (tbx tby) target-b
-              (flet ((accessible-p (x y) (member (funcall world x y) '(:earth nil))))
-                (let ((will-free-rock-a (will-free-a-rock tax tay world objects path metadata))
-                      (will-free-rock-b (will-free-a-rock tbx tby world objects path metadata))
-                      (robot-dist-a (object-sq-dist rx ry tax tay))
-                      (robot-dist-b (object-sq-dist rx ry tbx tby))
-                      (portal-dist-a (object-sq-dist px py tax tay))
-                      (portal-dist-b (object-sq-dist px py tbx tby))
-                      (direct-access-a (a*-search/accessible tax tay rx ry #'accessible-p))
-                      (direct-access-b (a*-search/accessible tbx tby rx ry #'accessible-p)))
-                  (cond ((and direct-access-a (not direct-access-b)) t)
-                        ((and direct-access-b (not direct-access-a)) nil)
-                        ((and has-flooding-p (< tay tby)) t)
-                        ((and has-flooding-p (> tay tby)) nil)
-                        ((and will-free-rock-b (not will-free-rock-a)) t)
-                        ((and will-free-rock-a (not will-free-rock-b)) nil)
-                        ((and has-flooding-p (> portal-dist-a portal-dist-b)) t)
-                        ((and has-flooding-p (> portal-dist-b portal-dist-a)) nil)
-                        (t (< robot-dist-a robot-dist-b))))))))))))
+          (with-coords (tax tay) (car target-a)
+            (with-coords (tbx tby) (car target-b)
+              (let ((will-free-rock-a (will-free-a-rock tax tay world objects path metadata))
+                    (will-free-rock-b (will-free-a-rock tbx tby world objects path metadata))
+                    (robot-dist-a (object-sq-dist rx ry tax tay))
+                    (robot-dist-b (object-sq-dist rx ry tbx tby))
+                    (portal-dist-a (object-sq-dist px py tax tay))
+                    (portal-dist-b (object-sq-dist px py tbx tby))
+                    (direct-access-a (cdr target-a))
+                    (direct-access-b (cdr target-b)))
+                (cond ((and direct-access-a (not direct-access-b)) t)
+                      ((and direct-access-b (not direct-access-a)) nil)
+                      ((and has-flooding-p (< tay tby)) t)
+                      ((and has-flooding-p (> tay tby)) nil)
+                      ((and will-free-rock-b (not will-free-rock-a)) t)
+                      ((and will-free-rock-a (not will-free-rock-b)) nil)
+                      ((and has-flooding-p (> portal-dist-a portal-dist-b)) t)
+                      ((and has-flooding-p (> portal-dist-b portal-dist-a)) nil)
+                      (t (< robot-dist-a robot-dist-b)))))))))))
 
 (defun find-most-important-object (type world objects path metadata)
-  (iter (for coords in (funcall objects type))
-        (collect coords into targets-facts)
-        (finally
-         (when targets-facts
-           (return (car (sort targets-facts (make-targets-importancy-comparator world objects path metadata))))))))
+  (with-robot-coords (rx ry) objects
+    (iter (for coords in (funcall objects type))
+          (for direct-access-p = (a*-search/accessible (realpart coords)
+                                                       (imagpart coords)
+                                                       rx
+                                                       ry
+                                                       (lambda (x y)
+                                                         (and (in-range-p metadata x y)
+                                                              (member (funcall world x y) '(:earth nil))))))
+          (collect (cons coords direct-access-p) into targets-facts)
+          (finally
+           (when targets-facts
+             (return (caar (sort targets-facts (make-targets-importancy-comparator world objects path metadata)))))))))
 
 (defun choose-target (world objects path metadata)
   (iter (for possible-targets in '(:lambda :open-lambda-lift :portal-a :portal-b :portal-c :portal-d :portal-e :portal-f :portal-g :portal-h :portal-i :razor))
